@@ -1,14 +1,16 @@
 export const APP_NAME = 'Rugdraiger Play'
 
+const base = import.meta.env.BASE_URL
+
 export const APP_ICONS = {
   /** Icono principal (1024×1024) */
-  app: '/icons/app-icon.png',
+  app: `${base}icons/app-icon.png`,
   /** PWA / tiendas — 512×512 */
-  pwa512: '/icons/icon-512.png',
+  pwa512: `${base}icons/icon-512.png`,
   /** PWA — 192×192 */
-  pwa192: '/icons/icon-192.png',
+  pwa192: `${base}icons/icon-192.png`,
   /** Favicon pestaña */
-  favicon32: '/icons/favicon-32.png',
+  favicon32: `${base}icons/favicon-32.png`,
   /** iOS / Add to Home Screen */
-  appleTouch: '/icons/apple-touch-icon.png',
+  appleTouch: `${base}icons/apple-touch-icon.png`,
 } as const

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="Rugdraiger Play" width="120" />
+</p>
+
 # Rugdraiger Play
 
 Reproductor de música local con versión **web** y app **Flutter**.
@@ -16,7 +20,14 @@ Abre `http://localhost:5173` en Chrome.
 
 https://RUGDRAIGER.github.io/rugdraiger_play/
 
-Se despliega automáticamente al hacer push a `main`.
+Para actualizar la web publicada:
+
+```bash
+cd web
+VITE_BASE_PATH=/rugdraiger_play/ npm run build
+cd dist && git init -b gh-pages && git add -A && git commit -m "Deploy"
+git push -f origin gh-pages
+```
 
 ## Flutter
 
