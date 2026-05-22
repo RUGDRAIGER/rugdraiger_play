@@ -4,9 +4,11 @@ import { usePlayerStore } from '../../store/playerStore'
 import { PlayableArtwork } from '../ui/PlayableArtwork'
 import { SongActionsMenu } from '../ui/SongActionsMenu'
 import { openSongMenu, handleSongMenuOpenChange, type SongMenuState } from '../ui/songMenuUtils'
-import { formatDuration } from '../../services/scannerService'
+import { formatDuration, formatSongFormat } from '../../services/scannerService'
 
-type SortKey = 'title' | 'artist' | 'album' | 'duration' | 'dateAdded'
+type SortKey = 'title' | 'artist' | 'album' | 'format' | 'duration' | 'dateAdded'
+
+const GRID = '40px 1fr 1fr 1fr 52px 60px 36px'
 
 export function SongsView() {
   const { songs } = useLibraryStore()
@@ -88,7 +90,7 @@ export function SongsView() {
 
       {/* Column headers */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 60px 36px',
+        display: 'grid', gridTemplateColumns: GRID,
         padding: '6px 28px', fontSize: 11, color: 'var(--text-secondary)',
         borderBottom: '1px solid var(--border)', flexShrink: 0, gap: 8,
         textTransform: 'uppercase', letterSpacing: 0.5,
@@ -102,6 +104,9 @@ export function SongsView() {
         </button>
         <button onClick={() => toggleSort('artist')} style={{ textAlign: 'left', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}>
           Artista <SortIcon k="artist" />
+        </button>
+        <button onClick={() => toggleSort('format')} style={{ textAlign: 'center', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}>
+          Fmt <SortIcon k="format" />
         </button>
         <button onClick={() => toggleSort('duration')} style={{ textAlign: 'right', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}>
           <SortIcon k="duration" /> Dur.
@@ -124,7 +129,7 @@ export function SongsView() {
                 onDoubleClick={() => playSong(song, filtered)}
                 onContextMenu={(e) => setMenuState(openSongMenu(e, song.id))}
                 style={{
-                  display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 60px 36px',
+                  display: 'grid', gridTemplateColumns: GRID,
                   padding: '8px 28px', gap: 8, alignItems: 'center',
                   background: isCurrent ? 'rgba(255,32,32,0.08)' : 'transparent',
                   cursor: 'pointer', transition: 'background 0.1s',
@@ -152,6 +157,21 @@ export function SongsView() {
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.album}</span>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist}</span>
+                <span
+                  title={formatSongFormat(song.format, song.isLossless)}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: 0.4,
+                    textAlign: 'center',
+                    color: song.isLossless ? 'var(--accent)' : 'var(--text-secondary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {song.format.toUpperCase()}
+                </span>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'right' }}>{formatDuration(song.duration)}</span>
                 <SongActionsMenu
                   song={song}

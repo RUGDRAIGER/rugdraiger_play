@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Song, Album, Artist, ScanProgress } from '../types'
 import { dbService } from '../services/dbService'
 import { scanFiles, scanDirectory, getScanErrorMessage, filterAudioFiles } from '../services/scannerService'
-import { enrichSongsArtwork } from '../services/artworkService'
+import { enrichSongsArtwork, canShareArtworkByAlbum } from '../services/artworkService'
 import { cacheSongFiles, clearSongBlobCache, removeSongFromCache } from '../services/audioFileService'
 import { clearArtworkUrlCache, revokeArtworkUrl } from '../services/artworkFileService'
 
@@ -22,7 +22,6 @@ interface LibraryStore {
   deleteSong: (id: string) => Promise<void>
   updateSongArtwork: (id: string, artwork: string) => Promise<void>
   applyArtworkToAlbum: (artist: string, album: string, artwork: string) => Promise<void>
-  applyArtworkToArtist: (artist: string, artwork: string) => Promise<void>
   getAlbumSongs: (albumId: string) => Song[]
   getArtistSongs: (artistId: string) => Song[]
 }
@@ -189,6 +188,8 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   applyArtworkToAlbum: async (artist, album, artwork) => {
+    if (!canShareArtworkByAlbum(artist, album)) return
+
     const songs = get().songs
     const targets = songs.filter(
       (s) => s.artist === artist && s.album === album && s.artwork !== artwork,
@@ -198,20 +199,6 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     await Promise.all(targets.map((s) => dbService.updateSongArtwork(s.id, artwork)))
     const updated = songs.map((s) =>
       s.artist === artist && s.album === album ? { ...s, artwork } : s,
-    )
-    set({ songs: updated, albums: buildAlbums(updated), artists: buildArtists(updated) })
-  },
-
-  applyArtworkToArtist: async (artistName, artwork) => {
-    const songs = get().songs
-    const targets = songs.filter(
-      (s) => s.artist === artistName && s.artwork !== artwork,
-    )
-    if (!targets.length) return
-
-    await Promise.all(targets.map((s) => dbService.updateSongArtwork(s.id, artwork)))
-    const updated = songs.map((s) =>
-      s.artist === artistName ? { ...s, artwork } : s,
     )
     set({ songs: updated, albums: buildAlbums(updated), artists: buildArtists(updated) })
   },

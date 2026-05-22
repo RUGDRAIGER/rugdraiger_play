@@ -1,6 +1,9 @@
 const cache = new Map<string, string>()
 const pending = new Map<string, Promise<string | undefined>>()
 
+const UNKNOWN_ARTIST = 'unknown artist'
+const UNKNOWN_ALBUM = 'unknown album'
+
 function normalizeQuery(value: string): string {
   return value
     .replace(/\([^)]*\)/g, '')
@@ -11,6 +14,33 @@ function normalizeQuery(value: string): string {
 
 function albumKey(artist: string, album: string): string {
   return `${artist.toLowerCase()}::${album.toLowerCase()}`
+}
+
+export function isGenericArtist(artist: string): boolean {
+  const value = artist.trim().toLowerCase()
+  return !value || value === UNKNOWN_ARTIST
+}
+
+export function isGenericAlbum(album: string): boolean {
+  const value = album.trim().toLowerCase()
+  return !value || value === UNKNOWN_ALBUM
+}
+
+export function canShareArtworkByAlbum(artist: string, album: string): boolean {
+  return !isGenericArtist(artist) && !isGenericAlbum(album)
+}
+
+function artworkCacheKey(
+  artist: string,
+  album: string,
+  title?: string,
+  songId?: string,
+): string {
+  if (songId || isGenericArtist(artist) || isGenericAlbum(album)) {
+    const idPart = songId ?? normalizeQuery(title || 'untitled').toLowerCase()
+    return `song::${idPart}::${normalizeQuery(artist).toLowerCase()}`
+  }
+  return albumKey(artist, album)
 }
 
 function upgradeArtworkSize(url: string): string {
@@ -71,6 +101,7 @@ export async function fetchArtworkUrl(
   artist: string,
   album: string,
   title?: string,
+  songId?: string,
 ): Promise<string | undefined> {
   const cleanArtist = normalizeQuery(artist)
   const cleanAlbum = normalizeQuery(album)
@@ -78,13 +109,13 @@ export async function fetchArtworkUrl(
 
   if (!cleanArtist && !cleanAlbum && !cleanTitle) return undefined
 
-  const key = albumKey(cleanArtist || 'unknown', cleanAlbum || cleanTitle || 'unknown')
+  const key = artworkCacheKey(cleanArtist, cleanAlbum, cleanTitle, songId)
   if (cache.has(key)) return cache.get(key)
 
   if (pending.has(key)) return pending.get(key)
 
   const task = (async () => {
-    const unknownAlbum = !cleanAlbum || cleanAlbum.toLowerCase() === 'unknown album'
+    const unknownAlbum = isGenericAlbum(cleanAlbum)
 
     if (cleanTitle && unknownAlbum) {
       const songResults = await searchItunes(`${cleanArtist} ${cleanTitle}`, 'song')
@@ -131,21 +162,22 @@ export async function enrichSongsArtwork(
   songs: Array<{ id: string; artist: string; album: string; title: string; artwork?: string }>,
   onArtworkFound: (songId: string, artwork: string) => void,
 ): Promise<void> {
-  const albumArt = new Map<string, string>()
+  const sharedAlbumArt = new Map<string, string>()
 
   for (const song of songs) {
     if (song.artwork) continue
 
-    const key = albumKey(song.artist, song.album)
-    if (albumArt.has(key)) {
-      const artwork = albumArt.get(key)!
-      onArtworkFound(song.id, artwork)
+    const shareByAlbum = canShareArtworkByAlbum(song.artist, song.album)
+    const groupKey = shareByAlbum ? albumKey(song.artist, song.album) : `song:${song.id}`
+
+    if (shareByAlbum && sharedAlbumArt.has(groupKey)) {
+      onArtworkFound(song.id, sharedAlbumArt.get(groupKey)!)
       continue
     }
 
-    const url = await fetchArtworkUrl(song.artist, song.album, song.title)
+    const url = await fetchArtworkUrl(song.artist, song.album, song.title, song.id)
     if (url) {
-      albumArt.set(key, url)
+      if (shareByAlbum) sharedAlbumArt.set(groupKey, url)
       onArtworkFound(song.id, url)
     }
 

@@ -54,9 +54,6 @@ export const dbService = {
 
     for (const { file, ...song } of songs) {
       const existing = await db.songs.get(song.id)
-      if (existing?.artwork && !song.artwork) {
-        song.artwork = existing.artwork
-      }
 
       if (song.artwork?.startsWith('data:')) {
         const blob = dataUrlToBlob(song.artwork)
@@ -64,6 +61,8 @@ export const dbService = {
           await db.songArtworks.put({ id: song.id, blob })
           song.artwork = localArtworkRef(song.id)
         }
+      } else if (existing?.artwork && !song.artwork) {
+        song.artwork = existing.artwork
       }
 
       storable.push(song)

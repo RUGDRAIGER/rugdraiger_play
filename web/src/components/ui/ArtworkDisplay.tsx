@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Song } from '../../types'
-import { fetchArtworkUrl } from '../../services/artworkService'
+import { canShareArtworkByAlbum, fetchArtworkUrl } from '../../services/artworkService'
 import { resolveArtworkSrc, cacheArtworkUrl } from '../../services/artworkFileService'
 import { useLibraryStore } from '../../store/libraryStore'
 
@@ -29,10 +29,9 @@ export function ArtworkDisplay({
 }: Props) {
   const updateSongArtwork = useLibraryStore((s) => s.updateSongArtwork)
   const applyArtworkToAlbum = useLibraryStore((s) => s.applyArtworkToAlbum)
-  const applyArtworkToArtist = useLibraryStore((s) => s.applyArtworkToArtist)
 
-  const artist = artistProp ?? song?.artist
-  const album = albumProp ?? song?.album
+  const artist = artistProp ?? song?.artist ?? ''
+  const album = albumProp ?? song?.album ?? ''
   const title = titleProp ?? song?.title
   const artworkRef = artworkProp ?? song?.artwork
 
@@ -51,27 +50,28 @@ export function ArtworkDisplay({
   }, [song?.id, artworkRef])
 
   useEffect(() => {
-    const hasMeta = Boolean(artist?.trim() || album?.trim() || title?.trim())
+    const hasMeta = Boolean(artist.trim() || album.trim() || title?.trim())
     if (!hasMeta || (src && !failed)) return
 
     let cancelled = false
-    fetchArtworkUrl(artist ?? '', album ?? '', title).then((url) => {
+    fetchArtworkUrl(artist, album, title, song?.id).then((url) => {
       if (cancelled || !url) return
       setSrc(url)
       setFailed(false)
-      if (song?.id) cacheArtworkUrl(song.id, url)
 
       if (song?.id) {
+        cacheArtworkUrl(song.id, url)
         void updateSongArtwork(song.id, url)
-      } else if (artist && album) {
+        return
+      }
+
+      if (canShareArtworkByAlbum(artist, album)) {
         void applyArtworkToAlbum(artist, album, url)
-      } else if (artist) {
-        void applyArtworkToArtist(artist, url)
       }
     })
 
     return () => { cancelled = true }
-  }, [song?.id, artist, album, title, src, failed, updateSongArtwork, applyArtworkToAlbum, applyArtworkToArtist])
+  }, [song?.id, artist, album, title, src, failed, updateSongArtwork, applyArtworkToAlbum])
 
   const s: React.CSSProperties = {
     width: size,
