@@ -3,8 +3,11 @@ import type { ViewName } from './types'
 import { useLibraryStore } from './store/libraryStore'
 import { usePlaylistStore } from './store/playlistStore'
 import { usePlayerStore } from './store/playerStore'
+import { useIsMobile } from './hooks/useIsMobile'
 import { Sidebar } from './components/layout/Sidebar'
 import { BottomNav } from './components/layout/BottomNav'
+import { MobileHeader } from './components/layout/MobileHeader'
+import { MobileNavDrawer } from './components/layout/MobileNavDrawer'
 import { MiniPlayer } from './components/player/MiniPlayer'
 import { FullPlayer } from './components/player/FullPlayer'
 import { HomeView } from './components/home/HomeView'
@@ -18,7 +21,8 @@ import { SearchView } from './components/search/SearchView'
 
 export default function App() {
   const [activeView, setActiveView] = useState<ViewName>('home')
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const isMobile = useIsMobile()
   const { loadLibrary } = useLibraryStore()
   const { loadPlaylists } = usePlaylistStore()
   const { currentSong } = usePlayerStore()
@@ -29,13 +33,12 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [])
+    if (!isMobile) setDrawerOpen(false)
+  }, [isMobile])
 
   function navigate(view: ViewName) {
     setActiveView(view)
+    setDrawerOpen(false)
   }
 
   const view = (() => {
@@ -53,28 +56,41 @@ export default function App() {
   })()
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      {/* Desktop sidebar */}
+    <div className="app-shell">
       {!isMobile && (
         <Sidebar activeView={activeView} onNavigate={navigate} />
       )}
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-        <main style={{ flex: 1, display: 'flex', overflow: 'hidden' }} className="fade-in" key={activeView}>
+      <div className={`app-main${isMobile && currentSong ? ' has-mini-player' : ''}`}>
+        {isMobile && (
+          <MobileHeader onMenuOpen={() => setDrawerOpen(true)} />
+        )}
+
+        <main className="app-content fade-in" key={activeView}>
           {view}
         </main>
 
-        {/* Mini player */}
-        <MiniPlayer />
-
-        {/* Mobile bottom nav */}
-        {isMobile && (
-          <BottomNav activeView={activeView} onNavigate={navigate} />
-        )}
+        <div className="app-dock">
+          <MiniPlayer />
+          {isMobile && (
+            <BottomNav
+              activeView={activeView}
+              onNavigate={navigate}
+              onMenuOpen={() => setDrawerOpen(true)}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Full player overlay */}
+      {isMobile && (
+        <MobileNavDrawer
+          open={drawerOpen}
+          activeView={activeView}
+          onNavigate={navigate}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
+
       {currentSong && <FullPlayer />}
     </div>
   )

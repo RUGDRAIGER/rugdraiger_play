@@ -14,6 +14,8 @@
   --border-accent: rgba(255, 32, 32, 0.4);
   --sidebar-width: 220px;
   --mini-player-height: 76px;
+  --bottom-nav-height: 56px;
+  --mobile-header-height: 56px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -29,6 +31,77 @@
 html, body, #root {
   height: 100%;
   overflow: hidden;
+}
+
+.app-shell {
+  display: flex;
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-dock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottom-nav {
+  display: flex;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 200;
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    position: relative;
+  }
+
+  .app-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .bottom-nav {
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .app-main {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-main.has-mini-player {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--mini-player-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-page {
+    padding: 16px !important;
+    gap: 20px !important;
+  }
 }
 
 body {

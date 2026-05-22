@@ -40,7 +40,7 @@ export function HomeView({ onNavigate }: Props) {
     : 0
 
   return (
-    <div className="scrollable" style={{ flex: 1, padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 32 }}>
+    <div className="scrollable mobile-page" style={{ flex: 1, padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 32 }}>
       <ConfirmDialog
         open={clearStep === 1}
         title="Limpiar biblioteca"
