@@ -1,0 +1,35 @@
+PODS:
+  - Flutter (1.0.0)
+  - on_audio_query_ios (0.0.1):
+    - Flutter
+    - SwiftyBeaver
+  - permission_handler_apple (9.3.0):
+    - Flutter
+  - SwiftyBeaver (1.9.5)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - on_audio_query_ios (from `.symlinks/plugins/on_audio_query_ios/ios`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+
+SPEC REPOS:
+  trunk:
+    - SwiftyBeaver
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  on_audio_query_ios:
+    :path: ".symlinks/plugins/on_audio_query_ios/ios"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  on_audio_query_ios: 28a780e2d0d85d92d500ba6e12c6c8167022b2fa
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+  SwiftyBeaver: 84069991dd5dca07d7069100985badaca7f0ce82
+
+PODFILE CHECKSUM: f8c2dcdfb50bb67645580d28a6bf814fca30bdec
+
+COCOAPODS: 1.16.2

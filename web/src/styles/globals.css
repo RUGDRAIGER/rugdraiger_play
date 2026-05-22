@@ -1,0 +1,261 @@
+:root {
+  --bg-primary: #0A0A0A;
+  --bg-secondary: #141414;
+  --bg-surface: #1C1C1E;
+  --bg-surface2: #2C2C2E;
+  --bg-surface3: #3A3A3C;
+  --accent: #FF2020;
+  --accent-dim: #CC1A1A;
+  --accent-glow: rgba(255, 32, 32, 0.25);
+  --text-primary: #FFFFFF;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #48484A;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-accent: rgba(255, 32, 32, 0.4);
+  --sidebar-width: 220px;
+  --mini-player-height: 76px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--bg-surface3);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+}
+
+input, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes recordSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.fade-in { animation: fadeIn 0.25s ease forwards; }
+.slide-up { animation: slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+
+/* Glassmorphism */
+.glass {
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Neon glow */
+.neon-glow {
+  box-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow);
+}
+
+/* Active / hover states */
+.interactive {
+  transition: opacity 0.15s, background 0.15s, transform 0.1s;
+}
+.interactive:hover { opacity: 0.85; }
+.interactive:active { transform: scale(0.97); }
+
+/* ── Volume: línea horizontal + fader vertical (thumb) ── */
+input[type="range"].volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  outline: none;
+  cursor: ew-resize;
+}
+input[type="range"].volume-slider::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 3px;
+  background: transparent;
+}
+input[type="range"].volume-slider::-moz-range-track {
+  height: 5px;
+  border-radius: 3px;
+  background: transparent;
+}
+input[type="range"].volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Fader vertical sobre línea horizontal */
+  width: 10px;
+  height: 28px;
+  margin-top: -12px;
+  border-radius: 5px;
+  background: linear-gradient(
+    to bottom,
+    #FF4444 0%,
+    #FF2020 35%,
+    rgba(255,255,255,0.22) 48%,
+    rgba(255,255,255,0.22) 52%,
+    #FF2020 65%,
+    #CC1010 100%
+  );
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.6),
+    0 0 10px rgba(255, 32, 32, 0.5),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+  border: 1px solid rgba(255, 60, 60, 0.7);
+  cursor: ew-resize;
+  transition: box-shadow 0.12s, filter 0.12s;
+}
+input[type="range"].volume-slider::-webkit-slider-thumb:hover {
+  filter: brightness(1.15);
+  box-shadow:
+    0 3px 10px rgba(0,0,0,0.7),
+    0 0 18px rgba(255, 32, 32, 0.75),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+}
+input[type="range"].volume-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  filter: brightness(1.25);
+}
+input[type="range"].volume-slider::-moz-range-thumb {
+  width: 10px;
+  height: 28px;
+  border-radius: 5px;
+  background: linear-gradient(to bottom, #FF4444, #FF2020 40%, #CC1010);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 10px rgba(255,32,32,0.5);
+  border: 1px solid rgba(255, 60, 60, 0.7);
+  cursor: ew-resize;
+}
+
+/* ── EQ band slider (rotated -90deg → visually vertical) ── */
+/*
+ * Thumb dimensions (in the input's pre-rotation coordinate system):
+ *   CSS width  = visual HEIGHT after -90deg rotation  → 10px  (thin bar)
+ *   CSS height = visual WIDTH  after -90deg rotation  → 28px  (wide handle)
+ * Track height → 5px  (gets rotated to become track width)
+ */
+input[type="range"].eq-band {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  cursor: ns-resize;
+}
+input[type="range"].eq-band::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 32, 32, 0.20);
+  border: 1px solid rgba(255, 32, 32, 0.12);
+}
+input[type="range"].eq-band::-moz-range-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 32, 32, 0.20);
+}
+input[type="range"].eq-band::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  /* 10px tall × 28px wide (visually, after -90deg rotation) */
+  width:  10px;
+  height: 28px;
+  margin-top: -12.5px;          /* center on 5px track: -(28-5)/2 */
+  border-radius: 5px;
+  /* Red gradient — gives depth like a real mixer fader */
+  background: linear-gradient(
+    to bottom,
+    #FF4444 0%,
+    #FF2020 35%,
+    rgba(255,255,255,0.22) 48%,
+    rgba(255,255,255,0.22) 52%,
+    #FF2020 65%,
+    #CC1010 100%
+  );
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.6),
+    0 0 10px rgba(255, 32, 32, 0.5),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+  border: 1px solid rgba(255, 60, 60, 0.7);
+  cursor: ns-resize;
+  transition: box-shadow 0.12s, filter 0.12s;
+}
+input[type="range"].eq-band::-webkit-slider-thumb:hover {
+  filter: brightness(1.15);
+  box-shadow:
+    0 3px 10px rgba(0,0,0,0.7),
+    0 0 18px rgba(255, 32, 32, 0.75),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+}
+input[type="range"].eq-band::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  filter: brightness(1.25);
+}
+input[type="range"].eq-band::-moz-range-thumb {
+  width:  10px;
+  height: 28px;
+  border-radius: 5px;
+  background: linear-gradient(to bottom, #FF4444, #FF2020 40%, #CC1010);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 10px rgba(255,32,32,0.5);
+  border: 1px solid rgba(255, 60, 60, 0.7);
+  cursor: ns-resize;
+}
+input[type="range"].eq-band:disabled {
+  cursor: not-allowed;
+  opacity: 0.30;
+}
+input[type="range"].eq-band:disabled::-webkit-slider-thumb {
+  background: var(--bg-surface3);
+  box-shadow: none;
+  border-color: var(--border);
+}

@@ -1,0 +1,47 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Web (Vite + React)
+web/node_modules/
+web/dist/
+web/.venv/
+
+# Flutter / Dart
+rugdraiger_player/.dart_tool/
+rugdraiger_player/.flutter-plugins
+rugdraiger_player/.flutter-plugins-dependencies
+rugdraiger_player/.packages
+rugdraiger_player/.pub-cache/
+rugdraiger_player/.pub/
+rugdraiger_player/build
+rugdraiger_player/build_TEST/
+rugdraiger_player/coverage/
+rugdraiger_player/.idea/
+rugdraiger_player/*.iml
+rugdraiger_player/ios/Pods/
+rugdraiger_player/ios/.symlinks/
+rugdraiger_player/ios/Flutter/Flutter.framework
+rugdraiger_player/ios/Flutter/Flutter.podspec
+rugdraiger_player/ios/Flutter/Generated.xcconfig
+rugdraiger_player/ios/Flutter/ephemeral/
+rugdraiger_player/ios/Runner/GeneratedPluginRegistrant.*
+rugdraiger_player/android/.gradle/
+rugdraiger_player/android/build/
+rugdraiger_player/android/app/debug/
+rugdraiger_player/android/app/profile/
+rugdraiger_player/android/app/release/
+rugdraiger_player/android/local.properties
+rugdraiger_player/android/key.properties
+
+# Logs
+*.log
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# macOS duplicate copies
+* 2
+* 2.*
