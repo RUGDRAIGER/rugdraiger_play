@@ -16,6 +16,12 @@ npm run dev
 
 Abre `http://localhost:5173` en Chrome.
 
+### PWA + Android
+
+La app web es una **PWA** lista para empaquetar con [PWA Builder Studio](https://marketplace.visualstudio.com/items?itemName=PWABuilder.pwa-studio).
+
+Guía completa: [`android-twa/ANDROID.md`](android-twa/ANDROID.md)
+
 ### Publicado en GitHub Pages
 
 https://RUGDRAIGER.github.io/rugdraiger_play/

@@ -1,0 +1,41 @@
+{
+  "packageId": "com.rugdraiger.play",
+  "host": "rugdraiger.github.io",
+  "name": "Rugdraiger Play",
+  "launcherName": "Rugdraiger",
+  "display": "standalone",
+  "themeColor": "#0A0A0A",
+  "themeColorDark": "#0A0A0A",
+  "navigationColor": "#0A0A0A",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#0A0A0A",
+  "enableNotifications": false,
+  "startUrl": "/rugdraiger_play/",
+  "iconUrl": "https://rugdraiger.github.io/rugdraiger_play/icons/icon-512.png",
+  "maskableIconUrl": "https://rugdraiger.github.io/rugdraiger_play/icons/icon-512.png",
+  "monochromeIconUrl": "https://rugdraiger.github.io/rugdraiger_play/icons/icon-192.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "rugdraiger"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://rugdraiger.github.io/rugdraiger_play/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://rugdraiger.github.io/rugdraiger_play/",
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "fingerprints": []
+}

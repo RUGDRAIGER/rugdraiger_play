@@ -45,3 +45,11 @@ rugdraiger_player/android/key.properties
 # macOS duplicate copies
 * 2
 * 2.*
+
+# Android TWA signing keys (never commit)
+android-twa/node_modules/
+android-twa/android.keystore
+android-twa/*.keystore
+android-twa/app-release*.apk
+android-twa/app-release*.aab
+android-twa/local.properties

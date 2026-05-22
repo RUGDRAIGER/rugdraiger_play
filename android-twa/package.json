@@ -1,0 +1,15 @@
+{
+  "name": "rugdraiger-play-android",
+  "private": true,
+  "scripts": {
+    "init": "bubblewrap init --manifest https://rugdraiger.github.io/rugdraiger_play/manifest.json --directory .",
+    "update": "bubblewrap update",
+    "build": "bubblewrap build",
+    "build:apk": "bubblewrap build --skipPwaValidation",
+    "install": "bubblewrap install",
+    "validate": "bubblewrap validate"
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "^1.24.0"
+  }
+}
