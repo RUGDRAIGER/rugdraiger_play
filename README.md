@@ -12,6 +12,12 @@ npm run dev
 
 Abre `http://localhost:5173` en Chrome.
 
+### Publicado en GitHub Pages
+
+https://RUGDRAIGER.github.io/rugdraiger_play/
+
+Se despliega automáticamente al hacer push a `main`.
+
 ## Flutter
 
 ```bash
