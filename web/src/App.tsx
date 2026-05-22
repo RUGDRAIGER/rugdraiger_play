@@ -6,7 +6,6 @@ import { usePlayerStore } from './store/playerStore'
 import { useIsMobile } from './hooks/useIsMobile'
 import { Sidebar } from './components/layout/Sidebar'
 import { BottomNav } from './components/layout/BottomNav'
-import { MobileHeader } from './components/layout/MobileHeader'
 import { MobileNavDrawer } from './components/layout/MobileNavDrawer'
 import { MiniPlayer } from './components/player/MiniPlayer'
 import { FullPlayer } from './components/player/FullPlayer'
@@ -62,10 +61,6 @@ export default function App() {
       )}
 
       <div className={`app-main${isMobile && currentSong ? ' has-mini-player' : ''}`}>
-        {isMobile && (
-          <MobileHeader onMenuOpen={() => setDrawerOpen(true)} />
-        )}
-
         <main className="app-content fade-in" key={activeView}>
           {view}
         </main>

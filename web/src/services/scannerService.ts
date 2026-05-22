@@ -191,6 +191,120 @@ function nameFromFile(filename: string): string {
   return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
 }
 
+const GENERIC_FOLDER_NAMES = new Set([
+  'music', 'música', 'musica', 'downloads', 'descargas', 'audio', 'songs', 'canciones',
+  'albums', 'álbumes', 'albumes', 'mp3', 'flac', 'media', 'my music', 'mi musica',
+  'telegram', 'whatsapp', 'documents', 'dcim', 'misc', 'ringtones', 'notifications',
+])
+
+function cleanSegment(value: string): string {
+  return value.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function isGenericFolder(name: string): boolean {
+  const normalized = cleanSegment(name).toLowerCase()
+  return !normalized || GENERIC_FOLDER_NAMES.has(normalized)
+}
+
+function stripTrackPrefix(name: string): { track?: number; rest: string } {
+  const match = name.match(/^(\d{1,3})[\s.\-_]+(.+)$/)
+  if (match) return { track: parseInt(match[1], 10), rest: match[2].trim() }
+  return { rest: name.trim() }
+}
+
+function parseFilenameMetadata(
+  nameWithoutExt: string,
+  parentFolder?: string,
+): { title?: string; artist?: string; album?: string; track?: number } {
+  const { track: leadingTrack, rest: withoutLeadingTrack } = stripTrackPrefix(nameWithoutExt)
+  let track = leadingTrack
+  let rest = withoutLeadingTrack
+
+  const bracketMatch = rest.match(/^(.+?)\s*[\[\(]([^\]\)]+)[\]\)]\s*(.+)$/)
+  if (bracketMatch) {
+    return {
+      artist: cleanSegment(bracketMatch[1]),
+      album: cleanSegment(bracketMatch[2]),
+      title: cleanSegment(bracketMatch[3]),
+      track,
+    }
+  }
+
+  if (rest.includes(' - ')) {
+    const parts = rest.split(' - ').map((p) => cleanSegment(p)).filter(Boolean)
+    if (parts.length >= 3) {
+      return {
+        artist: parts[0],
+        album: parts[1],
+        title: parts.slice(2).join(' - '),
+        track,
+      }
+    }
+    if (parts.length === 2) {
+      const [first, second] = parts
+      const secondParsed = stripTrackPrefix(second)
+      if (secondParsed.track !== undefined) {
+        track = track ?? secondParsed.track
+        return { album: first, title: secondParsed.rest, track }
+      }
+      if (parentFolder && cleanSegment(parentFolder).toLowerCase() === first.toLowerCase()) {
+        return { album: first, title: second, track }
+      }
+      return { artist: first, title: second, track }
+    }
+  }
+
+  const underscoreParts = rest.split('_').map((p) => cleanSegment(p)).filter(Boolean)
+  if (underscoreParts.length >= 3 && /^\d{1,2}$/.test(underscoreParts[1])) {
+    return {
+      album: underscoreParts[0],
+      title: underscoreParts.slice(2).join(' '),
+      track: track ?? parseInt(underscoreParts[1], 10),
+    }
+  }
+
+  return { title: cleanSegment(rest), track }
+}
+
+function getPathSegments(file: File): string[] {
+  const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name
+  return relative.replace(/\\/g, '/').split('/').filter(Boolean)
+}
+
+function inferMetadataFromPath(file: File): { title?: string; artist?: string; album?: string; track?: number } {
+  const segments = getPathSegments(file)
+  if (segments.length === 0) return {}
+
+  const filename = segments[segments.length - 1]
+  const nameWithoutExt = filename.replace(/\.[^.]+$/, '')
+  const folders = segments.slice(0, -1).map(cleanSegment).filter(Boolean)
+  const meaningfulFolders = folders.filter((f) => !isGenericFolder(f))
+
+  const parentFolder = meaningfulFolders[meaningfulFolders.length - 1]
+  const artistFolder = meaningfulFolders.length >= 2 ? meaningfulFolders[meaningfulFolders.length - 2] : undefined
+
+  const fromName = parseFilenameMetadata(nameWithoutExt, parentFolder)
+
+  return {
+    title: fromName.title,
+    artist: fromName.artist ?? artistFolder,
+    album: fromName.album ?? parentFolder,
+    track: fromName.track,
+  }
+}
+
+function resolveSongMetadata(
+  file: File,
+  tags: { title?: string; artist?: string; album?: string; track?: number },
+) {
+  const inferred = inferMetadataFromPath(file)
+  const title = tags.title || inferred.title || nameFromFile(file.name)
+  const artist = tags.artist || inferred.artist || 'Unknown Artist'
+  const album = tags.album || inferred.album || 'Unknown Album'
+  const trackNumber = tags.track || inferred.track || 0
+  return { title, artist, album, trackNumber }
+}
+
 export function supportsDirectoryPicker(): boolean {
   return 'showDirectoryPicker' in window
 }
@@ -217,10 +331,7 @@ export async function scanFiles(
 
     const ext = getExtension(file.name)
     const [tags, duration] = await Promise.all([readTagsFromFile(file), getAudioDuration(file)])
-
-    const title = tags.title || nameFromFile(file.name)
-    const artist = tags.artist || 'Unknown Artist'
-    const album = tags.album || 'Unknown Album'
+    const { title, artist, album, trackNumber } = resolveSongMetadata(file, tags)
 
     songs.push({
       id: generateId(file),
@@ -230,7 +341,7 @@ export async function scanFiles(
       genre: tags.genre || '',
       duration,
       fileSize: file.size,
-      trackNumber: tags.track || 0,
+      trackNumber,
       format: ext,
       isLossless: LOSSLESS_FORMATS.includes(ext),
       dateAdded: Date.now(),
