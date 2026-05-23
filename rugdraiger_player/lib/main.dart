@@ -11,6 +11,7 @@ import 'core/constants/app_constants.dart';
 import 'data/repositories/music_repository.dart';
 import 'services/audio_service.dart';
 import 'services/equalizer_service.dart';
+import 'services/permission_service.dart';
 import 'presentation/bloc/player/player_bloc.dart';
 import 'presentation/bloc/library/library_bloc.dart';
 import 'presentation/screens/home/main_scaffold.dart';
@@ -100,7 +101,6 @@ class RugdraigerApp extends StatelessWidget {
   }
 }
 
-/// Gate de permisos antes de mostrar la app principal.
 class _AppBootstrap extends StatelessWidget {
   const _AppBootstrap();
 
@@ -118,48 +118,47 @@ class _PermissionGate extends StatefulWidget {
 class _PermissionGateState extends State<_PermissionGate> {
   bool _loading = true;
   bool _granted = false;
+  bool _permanentlyDenied = false;
 
   @override
   void initState() {
     super.initState();
-    _checkPermission();
+    _initPermissions();
   }
 
-  Future<void> _checkPermission() async {
-    final status = await _requestPermissions();
+  Future<void> _initPermissions() async {
+    final hasAccess = await PermissionService.hasMediaAccess();
+    if (hasAccess) {
+      await PermissionService.requestNotificationsOptional();
+      if (mounted) {
+        setState(() {
+          _granted = true;
+          _loading = false;
+        });
+      }
+      return;
+    }
+
+    // Primera apertura: pedir permiso de inmediato
+    await _requestAccess();
+  }
+
+  Future<void> _requestAccess() async {
+    setState(() => _loading = true);
+
+    final granted = await PermissionService.requestMediaAccess();
+    if (granted) {
+      await PermissionService.requestNotificationsOptional();
+    }
+
+    final permanent = !granted && await PermissionService.isPermanentlyDenied();
+
     if (mounted) {
       setState(() {
-        _granted = status;
+        _granted = granted;
+        _permanentlyDenied = permanent;
         _loading = false;
       });
-    }
-  }
-
-  Future<bool> _requestPermissions() async {
-    try {
-      final permissions = <Permission>[
-        Permission.audio,
-        Permission.notification,
-      ];
-
-      for (final permission in permissions) {
-        final current = await permission.status;
-        if (current.isGranted) continue;
-        final result = await permission.request().timeout(const Duration(seconds: 20));
-        if (result.isPermanentlyDenied) {
-          return false;
-        }
-      }
-
-      final audioGranted = await Permission.audio.isGranted;
-      if (audioGranted) return true;
-
-      // Android 12 y anteriores
-      final storage = await Permission.storage.request().timeout(const Duration(seconds: 20));
-      return storage.isGranted || audioGranted;
-    } catch (e) {
-      debugPrint('Permission request failed: $e');
-      return false;
     }
   }
 
@@ -178,6 +177,11 @@ class _PermissionGateState extends State<_PermissionGate> {
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.neonRed),
                 strokeWidth: 2,
               ),
+              SizedBox(height: 16),
+              Text(
+                'Preparando Rugdraiger Play...',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
             ],
           ),
         ),
@@ -187,7 +191,7 @@ class _PermissionGateState extends State<_PermissionGate> {
     if (!_granted) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(
+        body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -195,37 +199,55 @@ class _PermissionGateState extends State<_PermissionGate> {
               children: [
                 const _AppLogo(),
                 const SizedBox(height: 32),
+                const Icon(Icons.library_music_rounded, color: AppColors.accent, size: 48),
+                const SizedBox(height: 20),
                 const Text(
-                  'Permiso de almacenamiento',
+                  'Acceso a tu música',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Rugdraiger Play necesita acceder a tu música para escanear la biblioteca.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                  'Rugdraiger Play necesita permiso para leer la música almacenada en tu dispositivo, escanear tu biblioteca y reproducir canciones.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Toca "Permitir acceso" y acepta el permiso de archivos de audio en el diálogo del sistema.',
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () async {
-                    await openAppSettings();
-                    await _checkPermission();
-                  },
-                  child: const Text('ABRIR AJUSTES'),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => setState(() => _granted = true),
-                  child: const Text(
-                    'Continuar sin permiso',
-                    style: TextStyle(color: AppColors.textMuted),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _permanentlyDenied
+                        ? () async {
+                            await openAppSettings();
+                            await _requestAccess();
+                          }
+                        : _requestAccess,
+                    icon: Icon(_permanentlyDenied ? Icons.settings_rounded : Icons.check_rounded),
+                    label: Text(_permanentlyDenied ? 'ABRIR AJUSTES' : 'PERMITIR ACCESO'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                   ),
                 ),
+                if (!_permanentlyDenied) ...[
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: _requestAccess,
+                    child: const Text('Reintentar', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                ],
               ],
             ),
           ),
@@ -233,7 +255,7 @@ class _PermissionGateState extends State<_PermissionGate> {
       );
     }
 
-    return const MainScaffold();
+    return const MainScaffold(autoScanOnStart: true);
   }
 }
 

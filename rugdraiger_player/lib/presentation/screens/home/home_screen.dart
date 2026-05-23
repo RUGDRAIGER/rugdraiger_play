@@ -25,12 +25,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _clearStep = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    context.read<LibraryBloc>().add(const LoadLibraryEvent());
-  }
-
   Future<void> _pickFolder() async {
     final path = await FilePicker.platform.getDirectoryPath();
     if (path != null && mounted) {

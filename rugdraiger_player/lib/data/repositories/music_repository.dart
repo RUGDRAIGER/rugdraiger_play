@@ -19,6 +19,13 @@ class MusicRepository {
   // ── Scanning ───────────────────────────────────────────────────────────────
 
   Future<int> scanAndIndexLibrary() async {
+    final permitted = await _audioQuery.checkAndRequest(retryRequest: true);
+    if (!permitted) {
+      throw Exception(
+        'Permiso denegado. Activa el acceso a música en Ajustes del dispositivo.',
+      );
+    }
+
     try {
       final songs = await _audioQuery.querySongs(
         sortType: oaq.SongSortType.TITLE,
@@ -243,10 +250,12 @@ class MusicRepository {
 
   String _bestUri(oaq.SongModel song) {
     final uri = song.uri?.trim();
-    if (uri != null && uri.isNotEmpty) {
-      if (uri.startsWith('content://')) return uri;
+    if (uri != null && uri.isNotEmpty && uri.startsWith('content://')) {
       return uri;
     }
-    return song.data;
+    final data = song.data.trim();
+    if (data.startsWith('content://')) return data;
+    if (uri != null && uri.isNotEmpty) return uri;
+    return data;
   }
 }

@@ -212,22 +212,15 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
   }
 
   Future<void> _onScanLibrary(ScanLibraryEvent event, Emitter emit) async {
-    emit(state.copyWith(status: LibraryStatus.scanning));
+    emit(state.copyWith(status: LibraryStatus.scanning, errorMessage: null));
     try {
       final count = await _repository.scanAndIndexLibrary();
-      if (count == 0) {
-        emit(state.copyWith(
-          status: LibraryStatus.error,
-          errorMessage: 'No se encontraron canciones. Verifica los permisos de audio.',
-        ));
-        return;
-      }
       emit(state.copyWith(scannedCount: count));
       add(const LoadLibraryEvent());
     } catch (e) {
       emit(state.copyWith(
         status: LibraryStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: e.toString().replaceFirst('Exception: ', ''),
       ));
     }
   }

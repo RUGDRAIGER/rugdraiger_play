@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/navigation/view_name.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../bloc/library/library_bloc.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/mini_player.dart';
 import '../../widgets/mobile_nav_drawer.dart';
@@ -16,7 +18,9 @@ import '../playlist/playlists_screen.dart';
 import '../search/search_screen.dart';
 
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
+  final bool autoScanOnStart;
+
+  const MainScaffold({super.key, this.autoScanOnStart = false});
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
@@ -25,6 +29,22 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   ViewName _activeView = ViewName.home;
   bool _drawerOpen = false;
+  bool _initialScanDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<LibraryBloc>().add(const LoadLibraryEvent());
+  }
+
+  void _maybeAutoScan(LibraryBlocState state) {
+    if (!widget.autoScanOnStart || _initialScanDone) return;
+    if (state.status != LibraryStatus.loaded) return;
+    _initialScanDone = true;
+    if (state.songs.isEmpty) {
+      context.read<LibraryBloc>().add(const ScanLibraryEvent());
+    }
+  }
 
   void _navigate(ViewName view) {
     setState(() {
@@ -56,36 +76,39 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: AppConstants.animFast,
-                  child: KeyedSubtree(
-                    key: ValueKey(_activeView),
-                    child: _buildView(),
+    return BlocListener<LibraryBloc, LibraryBlocState>(
+      listener: (context, state) => _maybeAutoScan(state),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: AppConstants.animFast,
+                    child: KeyedSubtree(
+                      key: ValueKey(_activeView),
+                      child: _buildView(),
+                    ),
                   ),
                 ),
-              ),
-              MiniPlayer(onTap: () => openFullPlayer(context)),
-              BottomNavBar(
-                activeView: _activeView,
-                onNavigate: _navigate,
-                onMenuOpen: () => setState(() => _drawerOpen = true),
-              ),
-            ],
-          ),
-          MobileNavDrawer(
-            open: _drawerOpen,
-            activeView: _activeView,
-            onNavigate: _navigate,
-            onClose: () => setState(() => _drawerOpen = false),
-          ),
-        ],
+                MiniPlayer(onTap: () => openFullPlayer(context)),
+                BottomNavBar(
+                  activeView: _activeView,
+                  onNavigate: _navigate,
+                  onMenuOpen: () => setState(() => _drawerOpen = true),
+                ),
+              ],
+            ),
+            MobileNavDrawer(
+              open: _drawerOpen,
+              activeView: _activeView,
+              onNavigate: _navigate,
+              onClose: () => setState(() => _drawerOpen = false),
+            ),
+          ],
+        ),
       ),
     );
   }
