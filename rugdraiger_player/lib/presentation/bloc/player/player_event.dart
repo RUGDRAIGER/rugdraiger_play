@@ -63,9 +63,22 @@ class SetVolumeEvent extends PlayerEvent {
   const SetVolumeEvent(this.volume);
 }
 
+class ToggleMuteEvent extends PlayerEvent {
+  const ToggleMuteEvent();
+}
+
+class AddToQueueEvent extends PlayerEvent {
+  final SongModel song;
+  const AddToQueueEvent(this.song);
+}
+
 class PlayerStateUpdatedEvent extends PlayerEvent {
   final PlayerState playerState;
   const PlayerStateUpdatedEvent(this.playerState);
+}
+
+class StopPlaybackEvent extends PlayerEvent {
+  const StopPlaybackEvent();
 }
 
 class ToggleFavoriteEvent extends PlayerEvent {

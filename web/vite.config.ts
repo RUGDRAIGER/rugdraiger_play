@@ -2,13 +2,14 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const base = process.env.VITE_BASE_PATH || '/'
+const isCapacitor = process.env.VITE_CAPACITOR === 'true'
+const base = process.env.VITE_BASE_PATH ?? (isCapacitor ? './' : '/')
 
 export default defineConfig({
   base,
   plugins: [
     react(),
-    VitePWA({
+    ...(isCapacitor ? [] : [VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: ['icons/**/*', 'vendor/**/*'],
@@ -69,7 +70,7 @@ export default defineConfig({
       devOptions: {
         enabled: true,
       },
-    }),
+    })]),
   ],
   resolve: {
     alias: {

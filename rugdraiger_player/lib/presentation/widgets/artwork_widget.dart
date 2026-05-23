@@ -1,9 +1,11 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart' show QueryArtworkWidget, ArtworkType;
 import '../../core/theme/app_colors.dart';
 import '../../data/models/song_model.dart';
+import '../../services/artwork_cache.dart';
 
-class ArtworkWidget extends StatelessWidget {
+class ArtworkWidget extends StatefulWidget {
   final SongModel song;
   final double size;
   final double borderRadius;
@@ -18,13 +20,56 @@ class ArtworkWidget extends StatelessWidget {
   });
 
   @override
+  State<ArtworkWidget> createState() => _ArtworkWidgetState();
+}
+
+class _ArtworkWidgetState extends State<ArtworkWidget> {
+  Uint8List? _artwork;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArtwork();
+  }
+
+  @override
+  void didUpdateWidget(ArtworkWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.song.id != widget.song.id) {
+      _loadArtwork();
+    }
+  }
+
+  Future<void> _loadArtwork() async {
+    setState(() {
+      _loading = true;
+      _artwork = null;
+    });
+
+    final cached = ArtworkCache.get(widget.song.id) ?? widget.song.artwork;
+    if (cached != null) {
+      if (mounted) setState(() { _artwork = cached; _loading = false; });
+      return;
+    }
+
+    final loaded = await ArtworkCache.loadForSong(widget.song);
+    if (mounted) {
+      setState(() {
+        _artwork = loaded;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: widget.size,
+      height: widget.size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: showGlow
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        boxShadow: widget.showGlow
             ? [
                 BoxShadow(
                   color: AppColors.neonRed.withValues(alpha: 0.3),
@@ -35,24 +80,27 @@ class ArtworkWidget extends StatelessWidget {
             : null,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: song.artwork != null
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        child: _artwork != null
             ? Image.memory(
-                song.artwork!,
+                _artwork!,
                 fit: BoxFit.cover,
-                width: size,
-                height: size,
+                width: widget.size,
+                height: widget.size,
+                gaplessPlayback: true,
               )
-            : QueryArtworkWidget(
-                id: song.id,
-                type: ArtworkType.AUDIO,
-                artworkWidth: size,
-                artworkHeight: size,
-                artworkFit: BoxFit.cover,
-                artworkBorder: BorderRadius.circular(borderRadius),
-                nullArtworkWidget: _PlaceholderArtwork(size: size, radius: borderRadius),
-                keepOldArtwork: true,
-              ),
+            : _loading
+                ? _PlaceholderArtwork(size: widget.size, radius: widget.borderRadius)
+                : QueryArtworkWidget(
+                    id: widget.song.id,
+                    type: ArtworkType.AUDIO,
+                    artworkWidth: widget.size,
+                    artworkHeight: widget.size,
+                    artworkFit: BoxFit.cover,
+                    artworkBorder: BorderRadius.circular(widget.borderRadius),
+                    nullArtworkWidget: _PlaceholderArtwork(size: widget.size, radius: widget.borderRadius),
+                    keepOldArtwork: true,
+                  ),
       ),
     );
   }
@@ -83,7 +131,7 @@ class _PlaceholderArtwork extends StatelessWidget {
   }
 }
 
-class LargeArtworkWidget extends StatelessWidget {
+class LargeArtworkWidget extends StatefulWidget {
   final SongModel song;
   final double size;
 
@@ -94,10 +142,45 @@ class LargeArtworkWidget extends StatelessWidget {
   });
 
   @override
+  State<LargeArtworkWidget> createState() => _LargeArtworkWidgetState();
+}
+
+class _LargeArtworkWidgetState extends State<LargeArtworkWidget> {
+  Uint8List? _artwork;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArtwork();
+  }
+
+  @override
+  void didUpdateWidget(LargeArtworkWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.song.id != widget.song.id) {
+      _loadArtwork();
+    }
+  }
+
+  Future<void> _loadArtwork() async {
+    setState(() { _loading = true; _artwork = null; });
+
+    final cached = ArtworkCache.get(widget.song.id) ?? widget.song.artwork;
+    if (cached != null) {
+      if (mounted) setState(() { _artwork = cached; _loading = false; });
+      return;
+    }
+
+    final loaded = await ArtworkCache.loadForSong(widget.song);
+    if (mounted) setState(() { _artwork = loaded; _loading = false; });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: widget.size,
+      height: widget.size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -116,23 +199,26 @@ class LargeArtworkWidget extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: song.artwork != null
+        child: _artwork != null
             ? Image.memory(
-                song.artwork!,
+                _artwork!,
                 fit: BoxFit.cover,
-                width: size,
-                height: size,
+                width: widget.size,
+                height: widget.size,
+                gaplessPlayback: true,
               )
-            : QueryArtworkWidget(
-                id: song.id,
-                type: ArtworkType.AUDIO,
-                artworkWidth: size,
-                artworkHeight: size,
-                artworkFit: BoxFit.cover,
-                artworkBorder: BorderRadius.circular(16),
-                nullArtworkWidget: _LargePlaceholder(size: size),
-                keepOldArtwork: true,
-              ),
+            : _loading
+                ? _LargePlaceholder(size: widget.size)
+                : QueryArtworkWidget(
+                    id: widget.song.id,
+                    type: ArtworkType.AUDIO,
+                    artworkWidth: widget.size,
+                    artworkHeight: widget.size,
+                    artworkFit: BoxFit.cover,
+                    artworkBorder: BorderRadius.circular(16),
+                    nullArtworkWidget: _LargePlaceholder(size: widget.size),
+                    keepOldArtwork: true,
+                  ),
       ),
     );
   }

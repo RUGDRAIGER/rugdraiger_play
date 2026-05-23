@@ -1,6 +1,6 @@
 # Rugdraiger Play — APK Android nativo
 
-App **nativa** compilada con Flutter (no es un contenedor de Chrome).
+App **nativa Flutter** con la misma interfaz y mecánica que la web ([rugdraiger_play](https://rugdraiger.github.io/rugdraiger_play/)).
 
 ## Descargar
 
@@ -16,10 +16,10 @@ https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
 
 | | Web / PWA | APK nativo (este) |
 |---|-----------|-------------------|
-| Tecnología | Navegador / Chrome | Flutter + Android |
-| Música local | Carpeta del navegador | Acceso directo al almacenamiento |
-| Sensación | Página web | App instalada nativa |
-| Tamaño | ~3 MB (TWA) | ~20 MB |
+| Interfaz | Idéntica | Idéntica (Flutter nativo) |
+| Tecnología | Navegador | Flutter + MediaStore + ExoPlayer |
+| Música local | Selector de archivos | Escaneo nativo del almacenamiento |
+| Segundo plano | Limitado | Notificación de reproducción nativa |
 
 ## Instalar
 
@@ -34,3 +34,5 @@ https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
 ```
 
 Requisitos: Flutter SDK, JDK 17, Android SDK.
+
+La carpeta `web/android/` (Capacitor/WebView) **no** se usa para el APK publicado.

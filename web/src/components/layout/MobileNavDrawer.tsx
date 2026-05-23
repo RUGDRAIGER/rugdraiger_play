@@ -1,6 +1,7 @@
 import type { ViewName } from '../../types'
 import { AppIcon } from '../ui/AppIcon'
 import { APP_NAME, APK_DOWNLOAD_URL } from '../../constants/appBranding'
+import { isNativeApp } from '../../utils/platform'
 import { NAV_ITEMS } from './navItems'
 
 interface Props {
@@ -87,31 +88,33 @@ export function MobileNavDrawer({ open, activeView, onNavigate, onClose }: Props
           })}
         </nav>
 
-        <div style={{ padding: '8px 8px 16px', borderTop: '1px solid var(--border)' }}>
-          <a
-            href={APK_DOWNLOAD_URL}
-            download="rugdraiger-play.apk"
-            onClick={onClose}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              width: '100%',
-              padding: '12px 12px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(255, 32, 32, 0.12)',
-              color: 'var(--accent)',
-              fontSize: 15,
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-            </svg>
-            Download
-          </a>
-        </div>
+        {!isNativeApp && (
+          <div style={{ padding: '8px 8px 16px', borderTop: '1px solid var(--border)' }}>
+            <a
+              href={APK_DOWNLOAD_URL}
+              download="rugdraiger-play.apk"
+              onClick={onClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                width: '100%',
+                padding: '12px 12px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(255, 32, 32, 0.12)',
+                color: 'var(--accent)',
+                fontSize: 15,
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+              </svg>
+              Download
+            </a>
+          </div>
+        )}
       </aside>
     </>
   )

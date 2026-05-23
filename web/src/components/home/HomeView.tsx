@@ -9,6 +9,7 @@ import { openSongMenu, handleSongMenuOpenChange, type SongMenuState } from '../u
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { AppIcon } from '../ui/AppIcon'
 import { APP_NAME, APK_DOWNLOAD_URL } from '../../constants/appBranding'
+import { isNativeApp } from '../../utils/platform'
 import { formatDuration, supportsDirectoryPicker } from '../../services/scannerService'
 import type { ViewName } from '../../types'
 
@@ -158,20 +159,22 @@ export function HomeView({ onNavigate }: Props) {
         El navegador pedirá permiso de lectura; acéptalo para escanear todas las subcarpetas.
       </p>
 
-      <a
-        href={APK_DOWNLOAD_URL}
-        download="rugdraiger-play.apk"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '10px 16px', borderRadius: 'var(--radius-md)',
-          background: 'var(--bg-surface)', border: '1px solid var(--border)',
-          color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
-          textDecoration: 'none', width: 'fit-content',
-        }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 18H7v-2h10v2zM19 9h-1V7c0-1.1-.9-2-2-2H8C6.9 5 6 5.9 6 7v2H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2zm-5 6h-2v2h-2v-2H8v-2h2v-2h2v2h2v2z"/></svg>
-        Descargar app Android nativa
-      </a>
+      {!isNativeApp && (
+        <a
+          href={APK_DOWNLOAD_URL}
+          download="rugdraiger-play.apk"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '10px 16px', borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface)', border: '1px solid var(--border)',
+            color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
+            textDecoration: 'none', width: 'fit-content',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 18H7v-2h10v2zM19 9h-1V7c0-1.1-.9-2-2-2H8C6.9 5 6 5.9 6 7v2H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2zm-5 6h-2v2h-2v-2H8v-2h2v-2h2v2h2v2z"/></svg>
+          Descargar app Android nativa
+        </a>
+      )}
 
       {/* Hidden inputs */}
       <input

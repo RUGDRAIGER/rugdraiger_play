@@ -1,3 +1,4 @@
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -29,7 +30,38 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
+  await _initPlatformServices();
   runApp(const RugdraigerApp());
+}
+
+Future<void> _initPlatformServices() async {
+  try {
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.music());
+  } catch (e, st) {
+    debugPrint('AudioSession init failed: $e\n$st');
+  }
+
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.rugdraiger.player.channel.audio',
+      androidNotificationChannelName: 'Rugdraiger Play',
+      androidNotificationOngoing: true,
+      androidStopForegroundOnPause: true,
+      androidNotificationIcon: 'mipmap/ic_launcher',
+      preloadArtwork: false,
+    );
+    AudioPlayerService.backgroundEnabled = true;
+  } catch (e, st) {
+    AudioPlayerService.backgroundEnabled = false;
+    debugPrint('JustAudioBackground init failed (playback sin notificación): $e\n$st');
+  }
+
+  try {
+    await EqualizerService().init();
+  } catch (e, st) {
+    debugPrint('EqualizerService init failed: $e\n$st');
+  }
 }
 
 class RugdraigerApp extends StatelessWidget {
@@ -68,76 +100,12 @@ class RugdraigerApp extends StatelessWidget {
   }
 }
 
-/// Inicializa servicios sin bloquear el primer frame de la UI.
-class _AppBootstrap extends StatefulWidget {
+/// Gate de permisos antes de mostrar la app principal.
+class _AppBootstrap extends StatelessWidget {
   const _AppBootstrap();
 
   @override
-  State<_AppBootstrap> createState() => _AppBootstrapState();
-}
-
-class _AppBootstrapState extends State<_AppBootstrap> {
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeServices();
-  }
-
-  Future<void> _initializeServices() async {
-    try {
-      await JustAudioBackground.init(
-        androidNotificationChannelId: 'com.rugdraiger.player.channel.audio',
-        androidNotificationChannelName: 'Rugdraiger Play',
-        androidNotificationOngoing: true,
-        androidStopForegroundOnPause: true,
-        androidNotificationIcon: 'mipmap/ic_launcher',
-        preloadArtwork: false,
-      );
-    } catch (e, st) {
-      debugPrint('JustAudioBackground init failed: $e\n$st');
-    }
-
-    try {
-      await EqualizerService().init();
-    } catch (e, st) {
-      debugPrint('EqualizerService init failed: $e\n$st');
-    }
-
-    if (mounted) {
-      setState(() => _ready = true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_ready) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _AppLogo(),
-              SizedBox(height: 32),
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.neonRed),
-                strokeWidth: 2,
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Iniciando Rugdraiger Play...',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return const _PermissionGate();
-  }
+  Widget build(BuildContext context) => const _PermissionGate();
 }
 
 class _PermissionGate extends StatefulWidget {
@@ -281,20 +249,25 @@ class _AppLogo extends StatelessWidget {
           height: 90,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.neonRed, width: 2),
-            color: AppColors.neonRedSubtle,
+            border: Border.all(color: AppColors.accent, width: 2),
             boxShadow: [
               BoxShadow(
-                color: AppColors.neonRed.withValues(alpha: 0.3),
+                color: AppColors.accent.withValues(alpha: 0.3),
                 blurRadius: 30,
                 spreadRadius: 5,
               ),
             ],
           ),
-          child: const Icon(
-            Icons.play_circle_filled_rounded,
-            color: AppColors.neonRed,
-            size: 52,
+          child: ClipOval(
+            child: Image.asset(
+              'assets/icons/app_icon.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.play_circle_filled_rounded,
+                color: AppColors.accent,
+                size: 52,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 16),

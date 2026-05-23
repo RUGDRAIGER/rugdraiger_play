@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/song_model.dart';
 import '../../../data/models/playlist_model.dart';
 import '../../../data/repositories/music_repository.dart';
+import '../../../services/artwork_cache.dart';
 import '../../../core/constants/app_constants.dart';
 
 // Events
@@ -56,6 +57,26 @@ class AddSongToPlaylistEvent extends LibraryEvent {
 class DeletePlaylistEvent extends LibraryEvent {
   final int playlistId;
   const DeletePlaylistEvent(this.playlistId);
+}
+
+class ScanFolderEvent extends LibraryEvent {
+  final String folderPath;
+  const ScanFolderEvent(this.folderPath);
+}
+
+class DeleteSongEvent extends LibraryEvent {
+  final int songId;
+  const DeleteSongEvent(this.songId);
+}
+
+class RemoveSongFromPlaylistEvent extends LibraryEvent {
+  final int playlistId;
+  final int songId;
+  const RemoveSongFromPlaylistEvent(this.playlistId, this.songId);
+}
+
+class ClearLibraryEvent extends LibraryEvent {
+  const ClearLibraryEvent();
 }
 
 class LoadFavoritesEvent extends LibraryEvent {
@@ -146,7 +167,11 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
     on<CreatePlaylistEvent>(_onCreatePlaylist);
     on<AddSongToPlaylistEvent>(_onAddSongToPlaylist);
     on<DeletePlaylistEvent>(_onDeletePlaylist);
+    on<ScanFolderEvent>(_onScanFolder);
+    on<DeleteSongEvent>(_onDeleteSong);
+    on<RemoveSongFromPlaylistEvent>(_onRemoveSongFromPlaylist);
     on<LoadFavoritesEvent>(_onLoadFavorites);
+    on<ClearLibraryEvent>(_onClearLibrary);
   }
 
   Future<void> _onLoadLibrary(LoadLibraryEvent event, Emitter emit) async {
@@ -172,6 +197,12 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
         playlists: results[5] as List<PlaylistModel>,
         favorites: results[6] as List<SongModel>,
       ));
+
+      // Precargar carátulas en segundo plano
+      final songs = results[0] as List<SongModel>;
+      if (songs.isNotEmpty) {
+        ArtworkCache.prefetchAll(songs);
+      }
     } catch (e) {
       emit(state.copyWith(
         status: LibraryStatus.error,
@@ -184,6 +215,13 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
     emit(state.copyWith(status: LibraryStatus.scanning));
     try {
       final count = await _repository.scanAndIndexLibrary();
+      if (count == 0) {
+        emit(state.copyWith(
+          status: LibraryStatus.error,
+          errorMessage: 'No se encontraron canciones. Verifica los permisos de audio.',
+        ));
+        return;
+      }
       emit(state.copyWith(scannedCount: count));
       add(const LoadLibraryEvent());
     } catch (e) {
@@ -235,8 +273,44 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
     emit(state.copyWith(playlists: playlists));
   }
 
+  Future<void> _onScanFolder(ScanFolderEvent event, Emitter emit) async {
+    emit(state.copyWith(status: LibraryStatus.scanning));
+    try {
+      final count = await _repository.scanDirectory(event.folderPath);
+      emit(state.copyWith(scannedCount: count));
+      add(const LoadLibraryEvent());
+    } catch (e) {
+      emit(state.copyWith(status: LibraryStatus.error, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteSong(DeleteSongEvent event, Emitter emit) async {
+    await _repository.deleteSong(event.songId);
+    add(const LoadLibraryEvent());
+  }
+
+  Future<void> _onRemoveSongFromPlaylist(RemoveSongFromPlaylistEvent event, Emitter emit) async {
+    await _repository.removeSongFromPlaylist(event.playlistId, event.songId);
+    final playlists = await _repository.getPlaylists();
+    emit(state.copyWith(playlists: playlists));
+  }
+
   Future<void> _onLoadFavorites(LoadFavoritesEvent event, Emitter emit) async {
     final favorites = await _repository.getFavoriteSongs();
     emit(state.copyWith(favorites: favorites));
+  }
+
+  Future<void> _onClearLibrary(ClearLibraryEvent event, Emitter emit) async {
+    emit(state.copyWith(status: LibraryStatus.loading));
+    try {
+      await _repository.clearLibrary();
+      ArtworkCache.clear();
+      emit(const LibraryBlocState(status: LibraryStatus.loaded));
+    } catch (e) {
+      emit(state.copyWith(
+        status: LibraryStatus.error,
+        errorMessage: e.toString(),
+      ));
+    }
   }
 }

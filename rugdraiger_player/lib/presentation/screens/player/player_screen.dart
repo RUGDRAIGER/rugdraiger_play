@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/duration_formatter.dart';
 import '../../bloc/player/player_bloc.dart';
 import '../../widgets/artwork_widget.dart';
+import '../../widgets/volume_fader.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -47,8 +48,15 @@ class _PlayerScreenState extends State<PlayerScreen>
         }
       },
       builder: (context, state) {
-        if (!state.hasActiveSong) {
+        if (!state.hasActiveSong && state.status != PlayerStatus.loading) {
           return _buildEmptyPlayer(context);
+        }
+
+        if (state.status == PlayerStatus.loading && state.currentSong != null) {
+          return _buildLoadingPlayer(context, state);
+        }
+        if (state.status == PlayerStatus.error && state.errorMessage != null) {
+          return _buildErrorPlayer(context, state.errorMessage!);
         }
 
         return Scaffold(
@@ -80,6 +88,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                             _buildTimeRow(state),
                             const SizedBox(height: 32),
                             _buildControls(context, state),
+                            const SizedBox(height: 20),
+                            VolumeFader(
+                              volume: state.volume,
+                              isMuted: state.isMuted,
+                              width: 200,
+                              onVolumeChange: (v) => context.read<PlayerBloc>().add(SetVolumeEvent(v)),
+                              onToggleMute: () => context.read<PlayerBloc>().add(const ToggleMuteEvent()),
+                            ),
                             const SizedBox(height: 24),
                             _buildBottomActions(context, state),
                             const SizedBox(height: 24),
@@ -343,6 +359,99 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  Widget _buildErrorPlayer(BuildContext context, String error) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            AppBar(
+              backgroundColor: Colors.transparent,
+              leading: IconButton(
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 56,
+                        color: AppColors.accent,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error al reproducir',
+                        style: AppTextStyles.titleMedium
+                            .copyWith(color: AppColors.accent),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        error,
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: AppColors.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingPlayer(BuildContext context, PlayerBlocState state) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTopBar(context),
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ArtworkWidget(song: state.currentSong!, size: 200, borderRadius: 16),
+                    const SizedBox(height: 24),
+                    Text(
+                      state.currentSong!.title,
+                      style: AppTextStyles.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.currentSong!.artist,
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 32),
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                      strokeWidth: 2,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Cargando...',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyPlayer(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -356,9 +465,29 @@ class _PlayerScreenState extends State<PlayerScreen>
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
-            const Expanded(
+            Expanded(
               child: Center(
-                child: Text('No song playing', style: AppTextStyles.headlineMedium),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.music_off_rounded,
+                        size: 64,
+                        color: AppColors.textTertiary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Seleccioná una canción para reproducir',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],

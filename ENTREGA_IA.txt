@@ -1,0 +1,354 @@
+================================================================================
+RUGDRAIGER PLAY — DOCUMENTO DE ENTREGA PARA OTRA IA
+================================================================================
+Repositorio: https://github.com/RUGDRAIGER/rugdraiger_play
+Fecha referencia: mayo 2026
+
+Este archivo describe SOLO:
+  A) La aplicación WEB (referencia de diseño y funcionalidad)
+  B) La aplicación ANDROID NATIVA Flutter (última versión publicada)
+
+NO usar Capacitor/WebView como app principal. El APK publicado es Flutter nativo.
+
+
+================================================================================
+A) PÁGINA WEB — Rugdraiger Play
+================================================================================
+
+--- URL y despliegue ---
+
+  Producción: https://rugdraiger.github.io/rugdraiger_play/
+  Base path build: /rugdraiger_play/
+  Carpeta fuente: web/
+  Build: cd web && npm run build:pages
+  Deploy: scripts/deploy-pwa.sh → rama gh-pages
+  APK descargable desde web: /rugdraiger_play/apk/rugdraiger-play.apk
+
+--- Stack tecnológico ---
+
+  React 18 + TypeScript + Vite 6
+  Estado: Zustand (4 stores)
+  Persistencia: Dexie (IndexedDB) — DB "RugdraigerPlayerDB" v3
+  Metadatos audio: jsmediatags (ID3/APIC en cliente)
+  Reproducción: HTMLAudioElement + Web Audio API (ecualizador real)
+  PWA: vite-plugin-pwa (service worker, manifest)
+  Capacitor en web/ existe pero NO es la app Android oficial
+
+--- Identidad visual (CSS variables en web/src/styles/globals.css) ---
+
+  --bg-primary:     #0A0A0A
+  --bg-secondary:   #141414
+  --bg-surface:     #1C1C1E
+  --bg-surface2:    #2C2C2E
+  --bg-surface3:    #3A3A3C
+  --accent:         #FF2020
+  --accent-dim:     #CC1A1A
+  --text-primary:   #FFFFFF
+  --text-secondary: #8E8E93
+  --text-tertiary:  #48484A
+  --border:         rgba(255,255,255,0.08)
+  --mini-player-height: 76px
+  --bottom-nav-height:  56px
+  Tipografía: system-ui / SF Pro / Segoe UI
+
+--- Arquitectura UI (web/src/App.tsx) ---
+
+  Navegación por estado local (ViewName), sin React Router.
+  Desktop (≥768px): Sidebar lateral 220px + contenido + MiniPlayer abajo
+  Móvil (<768px):   Contenido + MiniPlayer + BottomNav fijo + drawer "Más"
+
+  Vistas (ViewName en web/src/types/index.ts):
+    home, library, songs, albums, artists, playlists, equalizer, search
+    (playlist-detail existe en tipos; lógica dentro de PlaylistsView)
+
+  Bottom nav móvil (5 tabs + Más):
+    Inicio | Canciones | Playlists | Ecualizador | Buscar | Más
+  Drawer "Más" incluye las 8 vistas completas + link Download APK (solo web)
+
+--- Pantallas y archivos ---
+
+  HomeView          web/src/components/home/HomeView.tsx
+    - Logo, stats (canciones/álbumes)
+    - Escanear disco/carpeta (File System Access API o input webkitdirectory)
+    - Agregar archivos sueltos
+    - Botón descargar APK Android
+    - Recientes, preview álbumes
+
+  LibraryView       web/src/components/library/LibraryView.tsx
+    - Hub con 4 tarjetas: Canciones, Álbumes, Artistas, Playlists
+
+  SongsView         web/src/components/library/SongsView.tsx
+    - Tabla: #, título, álbum, artista, formato, duración, menú ⋮
+    - Búsqueda, orden por columnas, Reproducir todo
+    - SongActionsMenu por fila
+
+  AlbumsView        web/src/components/library/AlbumsView.tsx
+    - Grid álbumes + búsqueda
+    - Detalle inline: carátula con menú ⋮, artista, "Reproducir álbum"
+    - Lista tracks abajo con PlayableArtwork + SongActionsMenu
+
+  ArtistsView       web/src/components/library/ArtistsView.tsx
+    - Lista artistas → detalle inline con tracklist
+
+  PlaylistsView     web/src/components/playlist/PlaylistsView.tsx
+    - CRUD playlists, detalle con canciones, mosaic artwork
+
+  EqualizerView     web/src/components/equalizer/EqualizerView.tsx
+    - 10 bandas verticales estilo fader rojo (±12 dB, step 0.5)
+    - Presets: Flat, Bass, Treble, Rock, Pop, Jazz, Classical, Electronic, Vocal
+    - Toggle activar/desactivar
+
+  SearchView        web/src/components/search/SearchView.tsx
+    - Resultados agrupados: canciones, artistas, álbumes
+
+  MiniPlayer        web/src/components/player/MiniPlayer.tsx
+    - Barra progreso, artwork, título/artista, tiempo, prev/play/next
+    - VolumeFader horizontal (mute + slider rojo)
+
+  FullPlayer        web/src/components/player/FullPlayer.tsx
+    - Overlay fullscreen, blur artwork, cola, repeat/shuffle, VolumeFader
+
+--- Menú ⋮ canción (SongActionsMenu) ---
+
+  Archivo: web/src/components/ui/SongActionsMenu.tsx
+  Acciones:
+    - Agregar a playlist (lista dinámica)
+    - Agregar a la cola
+    - Quitar de playlist (si contexto playlist)
+    - Eliminar canción (confirmación)
+
+--- Stores Zustand ---
+
+  libraryStore   web/src/store/libraryStore.ts
+    songs, albums, artists (derivados), scan, deleteSong, artwork
+
+  playerStore    web/src/store/playerStore.ts
+    cola, play/pause, seek, volume, mute, repeat, shuffle, full player
+
+  eqStore        web/src/store/eqStore.ts
+    10 bandas, presets, enabled
+
+  playlistStore  web/src/store/playlistStore.ts
+    CRUD playlists, add/remove songs
+
+--- Servicios ---
+
+  scannerService.ts   — escaneo archivos/carpetas, formatos, inferencia metadata path
+  dbService.ts        — Dexie: songs, playlists, songBlobs, songArtworks
+  audioService.ts     — HTML audio + cadena BiquadFilter EQ
+  artworkService.ts   — tags embebidos + backfill iTunes Search API
+  audioFileService.ts — cache blobs en memoria
+
+--- Formatos soportados (web) ---
+
+  mp3, flac, aac, m4a, ogg, wav, opus, wma, aiff, alac
+
+--- Escaneo biblioteca (web) ---
+
+  - showDirectoryPicker() recursivo (Chrome/Edge desktop)
+  - Fallback: input type=file webkitdirectory
+  - input múltiple para archivos sueltos
+  - Metadatos: jsmediatags + duración vía Audio element
+  - Fallback álbum/artista desde nombre/ruta (inferMetadataFromPath)
+  - Persistencia IndexedDB; blobs de audio y artwork locales
+
+--- Modelo Song (web/src/types/index.ts) ---
+
+  id, title, artist, album, genre, duration (ms), fileSize, trackNumber,
+  format, isLossless, dateAdded, filePath, artwork, file (transient File)
+
+--- Componentes UI compartidos ---
+
+  ArtworkDisplay, AlbumCoverArt, PlayableArtwork, VolumeFader, AppIcon,
+  ConfirmDialog, IconButton, songMenuUtils
+
+--- Branding ---
+
+  web/src/constants/appBranding.ts
+  APP_NAME: Rugdraiger Play
+  APK_DOWNLOAD_URL: {base}apk/rugdraiger-play.apk
+
+
+================================================================================
+B) APP ANDROID NATIVA — Flutter (última versión)
+================================================================================
+
+--- Qué es ---
+
+  App NATIVA Flutter (NO WebView, NO Capacitor).
+  Replica interfaz y mecánica de la web descrita en sección A.
+  Carpeta: rugdraiger_player/
+  Package Android: com.rugdraiger.rugdraiger_player
+  Nombre visible: Rugdraiger Play
+
+--- APK publicado ---
+
+  Archivo: apk/rugdraiger-play.apk (~25 MB ARM64)
+  URL: https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
+  Build: ./scripts/build-apk.sh (Flutter, JDK 17, Android SDK, compileSdk 36)
+  Copia web: web/public/apk/rugdraiger-play.apk
+
+--- Stack tecnológico ---
+
+  Flutter 3.x / Dart >=3.4
+  Estado: flutter_bloc (PlayerBloc, LibraryBloc)
+  DB: sqflite (SQLite) — rugdraiger.db
+  Escaneo: on_audio_query (MediaStore) + file_picker (carpeta específica)
+  Audio: just_audio + just_audio_background + audio_session
+  EQ UI: EqualizerService (SharedPreferences) — UI estilo web; DSP nativo limitado
+  Permisos: permission_handler (READ_MEDIA_AUDIO, notificaciones)
+
+--- Identidad visual (lib/core/theme/app_colors.dart) ---
+
+  Mismos tokens que la web:
+  background #0A0A0A, surface #141414, surfaceElevated #1C1C1E
+  accent #FF2020, textSecondary #8E8E93, textTertiary #48484A
+  Icono app: assets/icons/app_icon.png (copiado de web icon-512)
+  Launcher Android: mipmaps generados en build-apk.sh desde app_icon.png
+
+--- Arquitectura navegación ---
+
+  MainScaffold (lib/presentation/screens/home/main_scaffold.dart)
+  ViewName enum (lib/core/navigation/view_name.dart):
+    home, library, songs, albums, artists, playlists, equalizer, search
+
+  BottomNavBar (5 + Más): Inicio | Canciones | Playlists | Ecualizador | Buscar | Más
+  MobileNavDrawer: las 8 vistas (sin botón Download — es app nativa)
+  MiniPlayer fijo sobre bottom nav
+  FullPlayer: PlayerScreen modal slide-up
+
+--- Pantallas Flutter ---
+
+  HomeScreen           lib/presentation/screens/home/home_screen.dart
+    - AppIconWidget + stats
+    - "Escanear biblioteca" (MediaStore completo)
+    - "Elegir carpeta" (file_picker getDirectoryPath → scanDirectory)
+    - Recientes, preview álbumes
+
+  LibraryHubScreen     lib/presentation/screens/library/library_hub_screen.dart
+    - 4 tarjetas como LibraryView web
+
+  SongsScreen          lib/presentation/screens/library/songs_screen.dart
+    - Búsqueda, Reproducir, lista con formato, menú ⋮
+
+  AlbumsScreen         lib/presentation/screens/library/albums_screen.dart
+    - Grid + búsqueda
+    - Detalle: carátula con ⋮, artista, "Reproducir álbum", lista tracks con ⋮
+
+  ArtistsScreen        lib/presentation/screens/library/artists_screen.dart
+    - Lista → detalle con tracklist y ⋮
+
+  PlaylistsScreen      lib/presentation/screens/playlist/playlists_screen.dart
+    - Crear playlist, detalle con canciones, ⋮ con playlistId
+
+  EqualizerScreen      lib/presentation/screens/equalizer/equalizer_screen.dart
+    - Faders verticales EqBandFader (estilo web)
+    - Presets, toggle, Restablecer
+
+  SearchScreen         lib/presentation/screens/search/search_screen.dart
+
+  PlayerScreen         lib/presentation/screens/player/player_screen.dart
+    - Artwork, controles, cola, VolumeFader
+
+  MiniPlayer           lib/presentation/widgets/mini_player.dart
+    - Progreso, artwork, tiempo, controles, VolumeFader (width 80)
+
+--- Menú ⋮ canción ---
+
+  Archivo: lib/presentation/widgets/song_actions_sheet.dart
+  Acciones:
+    - Agregar a playlist
+    - Agregar a la cola
+    - Quitar de playlist (si aplica)
+    - Eliminar canción (confirmación)
+
+--- BLoC / eventos principales ---
+
+  LibraryBloc:
+    LoadLibrary, ScanLibrary, ScanFolder(path), SearchSongs,
+    CreatePlaylist, AddSongToPlaylist, DeletePlaylist,
+    DeleteSong, RemoveSongFromPlaylist
+
+  PlayerBloc:
+    PlaySong, Pause, TogglePlayPause, Seek, SkipNext/Prev,
+    SetVolume, ToggleMute, ToggleShuffle, SetRepeatMode, AddToQueue
+
+--- Servicios ---
+
+  audio_service.dart      — just_audio, URIs file/content, cola, volumen, mute
+  music_repository.dart   — escaneo MediaStore + carpeta, CRUD SQLite
+  database_helper.dart    — songs, playlists, playlist_songs, recently_played
+  equalizer_service.dart  — presets/bandas en SharedPreferences
+
+--- Reproducción audio (Flutter) ---
+
+  - Rutas: Uri.file() o Uri.parse(content://...)
+  - Validación archivo existe antes de play
+  - ConcatenatingAudioSource + MediaItem (just_audio_background)
+  - Fallback sin MediaItem si falla background init
+  - audio_session configurado en main.dart (AudioSessionConfiguration.music)
+  - Notificación Android foreground al reproducir
+  - Errores visibles en mini player (errorMessage)
+
+--- Escaneo biblioteca (Flutter) ---
+
+  1) ScanLibraryEvent → on_audio_query querySongs (todo el dispositivo)
+  2) ScanFolderEvent → file_picker carpeta → scanDirectory recursivo
+  Formatos: mp3, flac, aac, wav, ogg, m4a, alac, aiff, opus, wma
+
+--- Formatos / permisos Android ---
+
+  AndroidManifest: READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE (≤32),
+  INTERNET, WAKE_LOCK, FOREGROUND_SERVICE, FOREGROUND_SERVICE_MEDIA_PLAYBACK,
+  POST_NOTIFICATIONS
+  compileSdk: 36 (app + subprojects en android/build.gradle.kts)
+
+--- Widgets UI clave ---
+
+  AppIconWidget, VolumeFader, EqBandFader, SongActionsSheet,
+  ArtworkWidget (QueryArtworkWidget), AlbumCard, SongListTile,
+  BottomNavBar, MobileNavDrawer
+
+--- Archivos obsoletos / no usar para APK ---
+
+  rugdraiger_player/lib/presentation/screens/library/library_screen.dart (tabs viejo)
+  rugdraiger_player/lib/presentation/screens/user/user_screen.dart (no en nav)
+  web/android/ (Capacitor — no genera el APK publicado)
+
+--- Comandos útiles ---
+
+  Analizar Flutter:  cd rugdraiger_player && flutter analyze
+  APK release:       ./scripts/build-apk.sh
+  Publicar web+APK:  ./scripts/deploy-pwa.sh
+
+--- Paridad web ↔ Flutter (estado actual) ---
+
+  IMPLEMENTADO en Flutter:
+    - Navegación y layout móvil equivalente
+    - Colores y tipografía alineados
+    - Escaneo dispositivo + carpeta específica
+    - Menú ⋮ canción y detalle álbum con lista
+    - VolumeFader en mini/full player
+    - EQ faders verticales UI
+    - Icono app real
+    - Reproducción nativa con just_audio
+
+  DIFERENCIAS / pendientes vs web:
+    - Web: File System Access API / picker navegador; Flutter: MediaStore + file_picker
+    - Web: EQ procesa audio (Web Audio API); Flutter: EQ guarda prefs, no DSP nativo completo
+    - Web: artwork iTunes backfill; Flutter: artwork desde MediaStore
+    - Web: Dexie blobs por canción; Flutter: paths URI del sistema
+    - Web: sidebar desktop; Flutter: solo layout móvil
+    - Web: PWA offline; Flutter: app instalada APK
+
+--- Objetivo para otra IA ---
+
+  La WEB es la referencia de diseño, UX y funcionalidades.
+  La app FLUTTER debe seguir evolucionando hacia paridad 1:1 con la web,
+  manteniendo ventajas nativas (MediaStore, background playback, notificaciones).
+  NO reemplazar Flutter por Capacitor/WebView.
+
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

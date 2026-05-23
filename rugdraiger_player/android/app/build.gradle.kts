@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.rugdraiger.rugdraiger_player"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

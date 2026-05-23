@@ -32,11 +32,13 @@ class MusicRepository {
               AppConstants.supportedFormats.contains(s.fileExtension.toLowerCase()))
           .toList();
 
+      if (supported.isEmpty) return 0;
+
       final models = supported.map(_fromOaqSong).toList();
       await _db.insertSongs(models);
       return models.length;
-    } catch (_) {
-      return 0;
+    } catch (e) {
+      throw Exception('Error al escanear biblioteca: $e');
     }
   }
 
@@ -54,7 +56,7 @@ class MusicRepository {
       artist: song.artist ?? 'Unknown Artist',
       album: song.album ?? 'Unknown Album',
       genre: song.genre ?? '',
-      filePath: song.data,
+      filePath: song.uri ?? song.data,
       durationMs: song.duration ?? 0,
       fileSize: song.size,
       trackNumber: song.track ?? 0,
@@ -169,4 +171,82 @@ class MusicRepository {
       _db.addSongToPlaylist(playlistId, songId);
 
   Future<void> deletePlaylist(int playlistId) => _db.deletePlaylist(playlistId);
+
+  Future<void> deleteSong(int songId) => _db.deleteSong(songId);
+
+  Future<void> clearLibrary() => _db.clearAllSongs();
+
+  Future<void> removeSongFromPlaylist(int playlistId, int songId) =>
+      _db.removeSongFromPlaylist(playlistId, songId);
+
+  // ── Playback URI resolution ────────────────────────────────────────────────
+
+  /// Resuelve la mejor ruta/URI reproducible para una canción.
+  /// Las rutas guardadas en SQLite pueden quedar obsoletas; MediaStore siempre
+  /// devuelve el URI content:// válido en Android moderno.
+  Future<SongModel> resolveForPlayback(SongModel song) async {
+    final path = await _resolvePlayablePath(song);
+    if (path == song.filePath) return song;
+    return song.copyWith(filePath: path);
+  }
+
+  Future<List<SongModel>> resolveQueueForPlayback(List<SongModel> songs) async {
+    return Future.wait(songs.map(resolveForPlayback));
+  }
+
+  Future<String> _resolvePlayablePath(SongModel song) async {
+    final existing = song.filePath.trim();
+    if (existing.startsWith('content://')) return existing;
+
+    // IDs de MediaStore (enteros pequeños) — re-consultar URI fresco
+    if (_isMediaStoreId(song.id)) {
+      try {
+        final fresh = await _findInMediaStore(byId: song.id);
+        if (fresh != null) return fresh;
+      } catch (_) {}
+    }
+
+    // Canciones de carpeta: buscar coincidencia por ruta en MediaStore
+    if (existing.isNotEmpty) {
+      try {
+        final fresh = await _findInMediaStore(byPath: existing);
+        if (fresh != null) return fresh;
+      } catch (_) {}
+    }
+
+    return existing;
+  }
+
+  bool _isMediaStoreId(int id) => id > 0 && id < 1000000000;
+
+  Future<String?> _findInMediaStore({int? byId, String? byPath}) async {
+    final songs = await _audioQuery.querySongs(
+      sortType: oaq.SongSortType.TITLE,
+      orderType: oaq.OrderType.ASC_OR_SMALLER,
+      uriType: oaq.UriType.EXTERNAL,
+      ignoreCase: true,
+    );
+
+    for (final s in songs) {
+      if (byId != null && s.id == byId) {
+        return _bestUri(s);
+      }
+      if (byPath != null) {
+        final normalized = byPath.replaceFirst('file://', '');
+        if (s.data == byPath || s.data == normalized || s.uri == byPath) {
+          return _bestUri(s);
+        }
+      }
+    }
+    return null;
+  }
+
+  String _bestUri(oaq.SongModel song) {
+    final uri = song.uri?.trim();
+    if (uri != null && uri.isNotEmpty) {
+      if (uri.startsWith('content://')) return uri;
+      return uri;
+    }
+    return song.data;
+  }
 }

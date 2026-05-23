@@ -245,6 +245,8 @@ class DatabaseHelper {
 
   Future<void> clearAllSongs() async {
     final db = await database;
+    await db.delete('playlist_songs');
+    await db.delete('recently_played');
     await db.delete('songs');
   }
 
@@ -300,6 +302,22 @@ class DatabaseHelper {
     final db = await database;
     await db.delete('playlists', where: 'id = ?', whereArgs: [playlistId]);
     await db.delete('playlist_songs', where: 'playlist_id = ?', whereArgs: [playlistId]);
+  }
+
+  Future<void> removeSongFromPlaylist(int playlistId, int songId) async {
+    final db = await database;
+    await db.delete(
+      'playlist_songs',
+      where: 'playlist_id = ? AND song_id = ?',
+      whereArgs: [playlistId, songId],
+    );
+  }
+
+  Future<void> deleteSong(int songId) async {
+    final db = await database;
+    await db.delete('songs', where: 'id = ?', whereArgs: [songId]);
+    await db.delete('playlist_songs', where: 'song_id = ?', whereArgs: [songId]);
+    await db.delete('recently_played', where: 'song_id = ?', whereArgs: [songId]);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

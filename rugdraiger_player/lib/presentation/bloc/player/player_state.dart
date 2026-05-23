@@ -11,6 +11,7 @@ class PlayerBlocState {
   final RepeatMode repeatMode;
   final bool shuffleEnabled;
   final double volume;
+  final bool isMuted;
   final List<SongModel> queue;
   final int currentIndex;
   final String? errorMessage;
@@ -23,6 +24,7 @@ class PlayerBlocState {
     this.repeatMode = RepeatMode.none,
     this.shuffleEnabled = false,
     this.volume = 1.0,
+    this.isMuted = false,
     this.queue = const [],
     this.currentIndex = 0,
     this.errorMessage,
@@ -45,9 +47,11 @@ class PlayerBlocState {
     RepeatMode? repeatMode,
     bool? shuffleEnabled,
     double? volume,
+    bool? isMuted,
     List<SongModel>? queue,
     int? currentIndex,
     String? errorMessage,
+    bool clearError = false,
   }) {
     return PlayerBlocState(
       status: status ?? this.status,
@@ -57,9 +61,10 @@ class PlayerBlocState {
       repeatMode: repeatMode ?? this.repeatMode,
       shuffleEnabled: shuffleEnabled ?? this.shuffleEnabled,
       volume: volume ?? this.volume,
+      isMuted: isMuted ?? this.isMuted,
       queue: queue ?? this.queue,
       currentIndex: currentIndex ?? this.currentIndex,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }

@@ -3,52 +3,26 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Primary Palette - Carbon Black
+  // Web design tokens
   static const Color background = Color(0xFF0A0A0A);
   static const Color surface = Color(0xFF141414);
-  static const Color surfaceElevated = Color(0xFF1C1C1C);
-  static const Color surfaceCard = Color(0xFF1E1E1E);
-  static const Color surfaceModal = Color(0xFF242424);
+  static const Color surfaceElevated = Color(0xFF1C1C1E);
+  static const Color surface2 = Color(0xFF2C2C2E);
+  static const Color surface3 = Color(0xFF3A3A3C);
 
-  // Neon Red Accent
-  static const Color neonRed = Color(0xFFFF0000);
-  static const Color neonRedLight = Color(0xFFFF3333);
-  static const Color neonRedDark = Color(0xFFCC0000);
-  static const Color neonRedGlow = Color(0x40FF0000);
-  static const Color neonRedSubtle = Color(0x1AFF0000);
+  static const Color accent = Color(0xFFFF2020);
+  static const Color accentDim = Color(0xFFCC1A1A);
+  static const Color accentGlow = Color(0x40FF2020);
+  static const Color accentSubtle = Color(0x1FFF2020);
 
-  // Text
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB0B0B0);
-  static const Color textMuted = Color(0xFF6B6B6B);
-  static const Color textDisabled = Color(0xFF3A3A3A);
+  static const Color textSecondary = Color(0xFF8E8E93);
+  static const Color textTertiary = Color(0xFF48484A);
 
-  // Borders & Dividers
-  static const Color border = Color(0xFF2A2A2A);
-  static const Color borderActive = Color(0xFFFF0000);
-  static const Color divider = Color(0xFF1F1F1F);
+  static const Color borderSubtle = Color(0x14FFFFFF);
+  static const Color borderAccent = Color(0x66FF2020);
 
-  // Progress & Indicators
-  static const Color progressBackground = Color(0xFF2A2A2A);
-  static const Color progressActive = Color(0xFFFF0000);
-
-  // Semantic
-  static const Color success = Color(0xFF00C853);
-  static const Color warning = Color(0xFFFFAB00);
   static const Color error = Color(0xFFFF1744);
-
-  // Gradients
-  static const LinearGradient backgroundGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFF0A0A0A), Color(0xFF121212)],
-  );
-
-  static const LinearGradient neonGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFF0000), Color(0xFFCC0000)],
-  );
 
   static const LinearGradient playerGradient = LinearGradient(
     begin: Alignment.topCenter,
@@ -56,8 +30,17 @@ class AppColors {
     colors: [Color(0xFF1A0000), Color(0xFF0A0A0A)],
   );
 
-  static RadialGradient neonGlow(Color color) => RadialGradient(
-    colors: [color.withValues(alpha: 0.3), Colors.transparent],
-    radius: 1.0,
-  );
+  // Legacy aliases used across existing widgets
+  static const Color neonRed = accent;
+  static const Color neonRedLight = Color(0xFFFF3333);
+  static const Color neonRedDark = accentDim;
+  static const Color neonRedGlow = accentGlow;
+  static const Color neonRedSubtle = accentSubtle;
+  static const Color textMuted = textTertiary;
+  static const Color surfaceCard = surfaceElevated;
+  static const Color surfaceModal = surface2;
+  static const Color border = borderSubtle;
+  static const Color divider = borderSubtle;
+  static const Color progressBackground = surface2;
+  static const Color progressActive = accent;
 }

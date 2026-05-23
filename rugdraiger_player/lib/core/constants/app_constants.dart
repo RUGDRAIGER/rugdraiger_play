@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'RUGDRAIGER';
+  static const String appName = 'Rugdraiger Play';
   static const String appVersion = '1.0.0';
 
   // Supported audio formats
@@ -33,14 +33,26 @@ class AppConstants {
   static const int eqBandCount = 10;
   static const List<int> eqFrequencies = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
+  /// Orden de presets igual que la web (Flat → Vocal).
+  static const List<EqPreset> eqDisplayPresets = [
+    EqPreset.flat,
+    EqPreset.bass,
+    EqPreset.treble,
+    EqPreset.rock,
+    EqPreset.jazz,
+    EqPreset.classical,
+    EqPreset.electronic,
+    EqPreset.vocal,
+  ];
+
   // UI
   static const double borderRadiusSmall = 8.0;
   static const double borderRadiusMedium = 12.0;
   static const double borderRadiusLarge = 16.0;
   static const double borderRadiusXLarge = 24.0;
   static const double borderWidth = 1.0;
-  static const double miniPlayerHeight = 72.0;
-  static const double bottomNavHeight = 60.0;
+  static const double miniPlayerHeight = 76.0;
+  static const double bottomNavHeight = 56.0;
 
   // Animation Durations
   static const Duration animFast = Duration(milliseconds: 150);

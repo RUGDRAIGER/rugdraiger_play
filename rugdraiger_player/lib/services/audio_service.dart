@@ -1,3 +1,5 @@
+import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:rxdart/rxdart.dart';
@@ -13,8 +15,10 @@ class PlayerState {
   final RepeatMode repeatMode;
   final bool shuffleEnabled;
   final double volume;
+  final bool isMuted;
   final List<SongModel> queue;
   final int currentIndex;
+  final String? errorMessage;
 
   const PlayerState({
     this.currentSong,
@@ -25,14 +29,18 @@ class PlayerState {
     this.repeatMode = RepeatMode.none,
     this.shuffleEnabled = false,
     this.volume = 1.0,
+    this.isMuted = false,
     this.queue = const [],
     this.currentIndex = 0,
+    this.errorMessage,
   });
 
   double get progress {
     if (duration.inMilliseconds == 0) return 0.0;
     return position.inMilliseconds / duration.inMilliseconds;
   }
+
+  double get effectiveVolume => isMuted ? 0.0 : volume;
 
   PlayerState copyWith({
     SongModel? currentSong,
@@ -43,11 +51,15 @@ class PlayerState {
     RepeatMode? repeatMode,
     bool? shuffleEnabled,
     double? volume,
+    bool? isMuted,
     List<SongModel>? queue,
     int? currentIndex,
+    String? errorMessage,
+    bool clearError = false,
+    bool clearSong = false,
   }) {
     return PlayerState(
-      currentSong: currentSong ?? this.currentSong,
+      currentSong: clearSong ? null : (currentSong ?? this.currentSong),
       isPlaying: isPlaying ?? this.isPlaying,
       isBuffering: isBuffering ?? this.isBuffering,
       position: position ?? this.position,
@@ -55,65 +67,72 @@ class PlayerState {
       repeatMode: repeatMode ?? this.repeatMode,
       shuffleEnabled: shuffleEnabled ?? this.shuffleEnabled,
       volume: volume ?? this.volume,
-      queue: queue ?? this.queue,
+      isMuted: isMuted ?? this.isMuted,
+      queue: clearSong ? const [] : (queue ?? this.queue),
       currentIndex: currentIndex ?? this.currentIndex,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
 
 class AudioPlayerService {
   static AudioPlayerService? _instance;
-  late final AudioPlayer _player;
+  static bool backgroundEnabled = false;
+
+  AudioPlayer? _player;
+  bool _listenersReady = false;
 
   final _stateController = BehaviorSubject<PlayerState>.seeded(const PlayerState());
 
   Stream<PlayerState> get stateStream => _stateController.stream;
   PlayerState get currentState => _stateController.value;
 
-  AudioPlayerService._internal() {
-    _player = AudioPlayer();
-    _initListeners();
-  }
+  AudioPlayerService._internal();
 
   factory AudioPlayerService() {
     _instance ??= AudioPlayerService._internal();
     return _instance!;
   }
 
+  AudioPlayer get _activePlayer {
+    _player ??= AudioPlayer();
+    if (!_listenersReady) {
+      _initListeners();
+      _listenersReady = true;
+    }
+    return _player!;
+  }
+
   void _initListeners() {
-    // Playing state changes
-    _player.playingStream.listen((playing) {
-      _updateState((s) => s.copyWith(isPlaying: playing));
+    final player = _player!;
+
+    player.playingStream.listen((playing) {
+      _updateState((s) => s.copyWith(isPlaying: playing, clearError: true));
     });
 
-    // Buffering / loading state
-    _player.playerStateStream.listen((state) {
+    player.playerStateStream.listen((state) {
       final isBuffering = state.processingState == ProcessingState.loading ||
           state.processingState == ProcessingState.buffering;
       _updateState((s) => s.copyWith(isBuffering: isBuffering));
     });
 
-    // Position updates
-    _player.positionStream.listen((position) {
+    player.positionStream.listen((position) {
       _updateState((s) => s.copyWith(position: position));
     });
 
-    // Duration updates
-    _player.durationStream.listen((duration) {
-      if (duration != null) {
+    player.durationStream.listen((duration) {
+      if (duration != null && duration.inMilliseconds > 0) {
         _updateState((s) => s.copyWith(duration: duration));
       }
     });
 
-    // Auto-advance on song completion
-    _player.processingStateStream.listen((state) {
+    player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
         _handleCompletion();
       }
     });
 
-    // Current index changes (for playlists)
-    _player.currentIndexStream.listen((index) {
+    player.currentIndexStream.listen((index) {
       if (index != null) {
         _updateState((s) {
           if (index < s.queue.length) {
@@ -128,88 +147,196 @@ class AudioPlayerService {
     });
   }
 
-  // ── Playback Control ───────────────────────────────────────────────────────
-
-  Future<void> playSong(SongModel song, {List<SongModel>? queue, int? index}) async {
-    final playQueue = queue ?? [song];
-    final playIndex = index ?? 0;
-
-    final audioSources = playQueue.map((s) => AudioSource.uri(
-      Uri.file(s.filePath),
-      tag: MediaItem(
-        id: s.id.toString(),
-        title: s.title,
-        artist: s.artist,
-        album: s.album,
-        duration: Duration(milliseconds: s.durationMs),
-      ),
-    )).toList();
-
-    final playlist = ConcatenatingAudioSource(children: audioSources);
-
-    await _player.setAudioSource(playlist, initialIndex: playIndex);
-    _updateState((s) => s.copyWith(
-      currentSong: song,
-      queue: playQueue,
-      currentIndex: playIndex,
-      position: Duration.zero,
-    ));
-    await _player.play();
-  }
-
-  Future<void> play() async => await _player.play();
-  Future<void> pause() async => await _player.pause();
-
-  Future<void> togglePlayPause() async {
-    if (_player.playing) {
-      await _player.pause();
-    } else {
-      await _player.play();
+  Future<void> _ensureSessionActive() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.setActive(true);
+    } catch (e) {
+      debugPrint('AudioSession.setActive failed: $e');
     }
   }
 
-  Future<void> seekTo(Duration position) async {
-    await _player.seek(position);
+  List<Uri> _urisForSong(SongModel song) {
+    final path = song.filePath.trim();
+    final uris = <Uri>{};
+
+    if (path.startsWith('content://')) {
+      uris.add(Uri.parse(path));
+    } else if (path.startsWith('file://')) {
+      uris.add(Uri.parse(path));
+      try {
+        uris.add(Uri.file(Uri.parse(path).toFilePath()));
+      } catch (_) {}
+    } else if (path.isNotEmpty) {
+      uris.add(Uri.file(path));
+      uris.add(Uri.parse('file://$path'));
+    }
+
+    return uris.toList();
   }
+
+  AudioSource _sourceForUri(Uri uri, SongModel song, {required bool withBackgroundTag}) {
+    if (withBackgroundTag) {
+      return AudioSource.uri(
+        uri,
+        tag: MediaItem(
+          id: song.id.toString(),
+          title: song.title,
+          artist: song.artist,
+          album: song.album,
+          duration: song.durationMs > 0
+              ? Duration(milliseconds: song.durationMs)
+              : null,
+        ),
+      );
+    }
+    return AudioSource.uri(uri);
+  }
+
+  Future<void> _setSourceWithFallback(
+    AudioPlayer player,
+    SongModel song,
+    List<SongModel> playQueue,
+    int safeIndex,
+  ) async {
+    final targetSong = playQueue[safeIndex];
+    final uris = _urisForSong(targetSong);
+    Object? lastError;
+
+    // Intento 1: playlist completa con tags (background)
+    if (backgroundEnabled) {
+      try {
+        final sources = playQueue.map((s) {
+          final songUris = _urisForSong(s);
+          return _sourceForUri(songUris.first, s, withBackgroundTag: true);
+        }).toList();
+        await player.setAudioSource(
+          ConcatenatingAudioSource(children: sources),
+          initialIndex: safeIndex,
+          preload: true,
+        );
+        return;
+      } catch (e) {
+        lastError = e;
+        debugPrint('Playback with background tags failed: $e');
+      }
+    }
+
+    // Intento 2: playlist sin tags
+    try {
+      final sources = playQueue.map((s) {
+        final songUris = _urisForSong(s);
+        return _sourceForUri(songUris.first, s, withBackgroundTag: false);
+      }).toList();
+      await player.setAudioSource(
+        ConcatenatingAudioSource(children: sources),
+        initialIndex: safeIndex,
+        preload: true,
+      );
+      return;
+    } catch (e) {
+      lastError = e;
+      debugPrint('Playback playlist failed: $e');
+    }
+
+    // Intento 3: solo la canción actual, probando cada URI
+    for (final uri in uris) {
+      try {
+        await player.setAudioSource(
+          _sourceForUri(uri, targetSong, withBackgroundTag: false),
+          preload: true,
+        );
+        return;
+      } catch (e) {
+        lastError = e;
+        debugPrint('Playback URI failed ($uri): $e');
+      }
+    }
+
+    throw Exception('No se pudo abrir el audio: ${targetSong.title}\n${lastError ?? ''}');
+  }
+
+  Future<void> playSong(SongModel song, {List<SongModel>? queue, int? index}) async {
+    final playQueue = queue ?? [song];
+    final playIndex = index ?? playQueue.indexWhere((s) => s.id == song.id);
+    final safeIndex = playIndex >= 0 ? playIndex : 0;
+
+    await _ensureSessionActive();
+
+    final player = _activePlayer;
+    await player.setShuffleModeEnabled(false);
+
+    await _setSourceWithFallback(player, song, playQueue, safeIndex);
+
+    final vol = currentState.effectiveVolume;
+    await player.setVolume(vol);
+
+    _updateState((s) => s.copyWith(
+      currentSong: playQueue[safeIndex],
+      queue: playQueue,
+      currentIndex: safeIndex,
+      position: Duration.zero,
+      clearError: true,
+    ));
+
+    try {
+      await player.play();
+    } catch (e) {
+      _updateState((s) => s.copyWith(
+        errorMessage: 'Error al reproducir: ${playQueue[safeIndex].title}',
+      ));
+      rethrow;
+    }
+  }
+
+  Future<void> play() async {
+    await _ensureSessionActive();
+    await _activePlayer.play();
+  }
+
+  Future<void> pause() async => _activePlayer.pause();
+
+  Future<void> togglePlayPause() async {
+    final player = _activePlayer;
+    if (player.playing) {
+      await player.pause();
+    } else {
+      await _ensureSessionActive();
+      await player.play();
+    }
+  }
+
+  Future<void> seekTo(Duration position) async => _activePlayer.seek(position);
 
   Future<void> seekToProgress(double progress) async {
     final duration = currentState.duration;
-    final position = Duration(
-      milliseconds: (duration.inMilliseconds * progress).round(),
-    );
-    await seekTo(position);
+    await seekTo(Duration(milliseconds: (duration.inMilliseconds * progress).round()));
   }
 
   Future<void> skipToNext() async {
     final state = currentState;
     if (state.queue.isEmpty) return;
-
     final nextIndex = (state.currentIndex + 1) % state.queue.length;
-    await _player.seek(Duration.zero, index: nextIndex);
-    if (!_player.playing) await _player.play();
+    await _activePlayer.seek(Duration.zero, index: nextIndex);
+    if (!_activePlayer.playing) await play();
   }
 
   Future<void> skipToPrevious() async {
     final state = currentState;
     if (state.queue.isEmpty) return;
-
-    // If >3 seconds into song, restart it
     if (state.position.inSeconds > 3) {
-      await _player.seek(Duration.zero);
+      await _activePlayer.seek(Duration.zero);
       return;
     }
-
     final prevIndex = (state.currentIndex - 1 + state.queue.length) % state.queue.length;
-    await _player.seek(Duration.zero, index: prevIndex);
-    if (!_player.playing) await _player.play();
+    await _activePlayer.seek(Duration.zero, index: prevIndex);
+    if (!_activePlayer.playing) await play();
   }
 
   Future<void> stop() async {
-    await _player.stop();
+    await _activePlayer.stop();
     _updateState((_) => const PlayerState());
   }
-
-  // ── Queue ──────────────────────────────────────────────────────────────────
 
   Future<void> setQueue(List<SongModel> songs, {int startIndex = 0}) async {
     if (songs.isEmpty) return;
@@ -217,43 +344,43 @@ class AudioPlayerService {
   }
 
   void addToQueue(SongModel song) {
-    final queue = [...currentState.queue, song];
-    _updateState((s) => s.copyWith(queue: queue));
+    _updateState((s) => s.copyWith(queue: [...s.queue, song]));
   }
-
-  void removeFromQueue(int index) {
-    final queue = List<SongModel>.from(currentState.queue);
-    if (index >= 0 && index < queue.length) {
-      queue.removeAt(index);
-      _updateState((s) => s.copyWith(queue: queue));
-    }
-  }
-
-  // ── Modes ──────────────────────────────────────────────────────────────────
 
   Future<void> setRepeatMode(RepeatMode mode) async {
     LoopMode loopMode;
     switch (mode) {
-      case RepeatMode.none: loopMode = LoopMode.off; break;
-      case RepeatMode.all:  loopMode = LoopMode.all; break;
-      case RepeatMode.one:  loopMode = LoopMode.one; break;
+      case RepeatMode.none:
+        loopMode = LoopMode.off;
+        break;
+      case RepeatMode.all:
+        loopMode = LoopMode.all;
+        break;
+      case RepeatMode.one:
+        loopMode = LoopMode.one;
+        break;
     }
-    await _player.setLoopMode(loopMode);
+    await _activePlayer.setLoopMode(loopMode);
     _updateState((s) => s.copyWith(repeatMode: mode));
   }
 
   Future<void> toggleShuffle() async {
     final enabled = !currentState.shuffleEnabled;
-    await _player.setShuffleModeEnabled(enabled);
+    await _activePlayer.setShuffleModeEnabled(enabled);
     _updateState((s) => s.copyWith(shuffleEnabled: enabled));
   }
 
   Future<void> setVolume(double volume) async {
-    await _player.setVolume(volume.clamp(0.0, 1.0));
-    _updateState((s) => s.copyWith(volume: volume));
+    final v = volume.clamp(0.0, 1.0);
+    await _activePlayer.setVolume(currentState.isMuted ? 0.0 : v);
+    _updateState((s) => s.copyWith(volume: v, isMuted: false));
   }
 
-  // ── Private ────────────────────────────────────────────────────────────────
+  Future<void> toggleMute() async {
+    final muted = !currentState.isMuted;
+    await _activePlayer.setVolume(muted ? 0.0 : currentState.volume);
+    _updateState((s) => s.copyWith(isMuted: muted));
+  }
 
   void _handleCompletion() {
     final state = currentState;
@@ -268,7 +395,7 @@ class AudioPlayerService {
   }
 
   Future<void> dispose() async {
-    await _player.dispose();
+    await _player?.dispose();
     await _stateController.close();
     _instance = null;
   }
