@@ -43,26 +43,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: 0,
-      backgroundColor: AppColors.background,
-      elevation: 0,
-      title: Text(
-        AppConstants.appName,
-        style: AppTextStyles.displayMedium.copyWith(
-          color: AppColors.neonRed,
-          letterSpacing: 3,
-          fontWeight: FontWeight.w700,
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                AppConstants.appName,
+                style: AppTextStyles.displayMedium.copyWith(
+                  color: AppColors.neonRed,
+                  letterSpacing: 3,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
+              onPressed: () => _showSettings(context),
+            ),
+          ],
         ),
       ),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
-          onPressed: () => _showSettings(context),
-        ),
-      ],
     );
   }
 
@@ -138,6 +141,33 @@ class _HomeScreenState extends State<HomeScreen> {
         if (state.status == LibraryStatus.loading || state.status == LibraryStatus.scanning) {
           return SliverToBoxAdapter(
             child: _buildLoadingState(state.status == LibraryStatus.scanning),
+          );
+        }
+
+        if (state.status == LibraryStatus.error) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline, color: AppColors.neonRed, size: 48),
+                  const SizedBox(height: 16),
+                  Text('Error al cargar', style: AppTextStyles.headlineMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.errorMessage ?? 'Error desconocido',
+                    style: AppTextStyles.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  NeonButton(
+                    label: 'REINTENTAR',
+                    icon: Icons.refresh_rounded,
+                    onTap: () => context.read<LibraryBloc>().add(const LoadLibraryEvent()),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 

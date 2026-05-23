@@ -13,6 +13,8 @@
     <!-- Foreground service for background audio -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Android 13+ notifications for background playback -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Vibrate for haptic feedback -->
     <uses-permission android:name="android.permission.VIBRATE" />
 

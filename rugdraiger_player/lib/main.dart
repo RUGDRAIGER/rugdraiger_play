@@ -17,30 +17,17 @@ import 'presentation/screens/home/main_scaffold.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Lock to portrait orientation
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // Transparent status bar
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
     systemNavigationBarColor: AppColors.surfaceElevated,
     systemNavigationBarIconBrightness: Brightness.light,
   ));
-
-  // Initialize background audio service
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.rugdraiger.player.channel.audio',
-    androidNotificationChannelName: 'Rugdraiger Player',
-    androidNotificationOngoing: true,
-    androidStopForegroundOnPause: true,
-  );
-
-  // Initialize Equalizer service
-  await EqualizerService().init();
 
   runApp(const RugdraigerApp());
 }
@@ -74,14 +61,85 @@ class RugdraigerApp extends StatelessWidget {
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.darkTheme,
-          home: const _PermissionGate(),
+          home: const _AppBootstrap(),
         ),
       ),
     );
   }
 }
 
-/// Handles storage permission before showing the main app.
+/// Inicializa servicios sin bloquear el primer frame de la UI.
+class _AppBootstrap extends StatefulWidget {
+  const _AppBootstrap();
+
+  @override
+  State<_AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends State<_AppBootstrap> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeServices();
+  }
+
+  Future<void> _initializeServices() async {
+    try {
+      await JustAudioBackground.init(
+        androidNotificationChannelId: 'com.rugdraiger.player.channel.audio',
+        androidNotificationChannelName: 'Rugdraiger Play',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: true,
+        androidNotificationIcon: 'mipmap/ic_launcher',
+        preloadArtwork: false,
+      );
+    } catch (e, st) {
+      debugPrint('JustAudioBackground init failed: $e\n$st');
+    }
+
+    try {
+      await EqualizerService().init();
+    } catch (e, st) {
+      debugPrint('EqualizerService init failed: $e\n$st');
+    }
+
+    if (mounted) {
+      setState(() => _ready = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _AppLogo(),
+              SizedBox(height: 32),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.neonRed),
+                strokeWidth: 2,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Iniciando Rugdraiger Play...',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return const _PermissionGate();
+  }
+}
+
 class _PermissionGate extends StatefulWidget {
   const _PermissionGate();
 
@@ -110,12 +168,31 @@ class _PermissionGateState extends State<_PermissionGate> {
   }
 
   Future<bool> _requestPermissions() async {
-    // Android 13+ uses READ_MEDIA_AUDIO; older uses READ_EXTERNAL_STORAGE
-    final audioStatus = await Permission.audio.request();
-    if (audioStatus.isGranted) return true;
+    try {
+      final permissions = <Permission>[
+        Permission.audio,
+        Permission.notification,
+      ];
 
-    final storageStatus = await Permission.storage.request();
-    return storageStatus.isGranted;
+      for (final permission in permissions) {
+        final current = await permission.status;
+        if (current.isGranted) continue;
+        final result = await permission.request().timeout(const Duration(seconds: 20));
+        if (result.isPermanentlyDenied) {
+          return false;
+        }
+      }
+
+      final audioGranted = await Permission.audio.isGranted;
+      if (audioGranted) return true;
+
+      // Android 12 y anteriores
+      final storage = await Permission.storage.request().timeout(const Duration(seconds: 20));
+      return storage.isGranted || audioGranted;
+    } catch (e) {
+      debugPrint('Permission request failed: $e');
+      return false;
+    }
   }
 
   @override
@@ -151,7 +228,7 @@ class _PermissionGateState extends State<_PermissionGate> {
                 const _AppLogo(),
                 const SizedBox(height: 32),
                 const Text(
-                  'Storage Permission Required',
+                  'Permiso de almacenamiento',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
@@ -161,7 +238,7 @@ class _PermissionGateState extends State<_PermissionGate> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Rugdraiger Player needs access to your music files to scan your library.',
+                  'Rugdraiger Play necesita acceder a tu música para escanear la biblioteca.',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
@@ -171,7 +248,15 @@ class _PermissionGateState extends State<_PermissionGate> {
                     await openAppSettings();
                     await _checkPermission();
                   },
-                  child: const Text('GRANT PERMISSION'),
+                  child: const Text('ABRIR AJUSTES'),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => setState(() => _granted = true),
+                  child: const Text(
+                    'Continuar sin permiso',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
                 ),
               ],
             ),
