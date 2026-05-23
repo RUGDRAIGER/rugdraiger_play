@@ -1,34 +1,36 @@
-# Rugdraiger Play — APK Android
+# Rugdraiger Play — APK Android nativo
 
-App Android (TWA) que carga la PWA publicada en GitHub Pages.
+App **nativa** compilada con Flutter (no es un contenedor de Chrome).
 
 ## Descargar
 
-**Archivo:** `rugdraiger-play.apk` (~3.3 MB)
+**Archivo:** `rugdraiger-play.apk` (~20 MB, ARM64)
 
-**URL pública (GitHub Pages):**
+**URL pública:**
 
 ```
 https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
 ```
 
-## Instalar en Android
+## Diferencia con la versión web
 
-1. Descarga el APK en tu teléfono.
-2. Abre el archivo descargado.
-3. Si Android pide permiso, activa **Instalar apps desconocidas** para tu navegador o gestor de archivos.
-4. Confirma la instalación.
+| | Web / PWA | APK nativo (este) |
+|---|-----------|-------------------|
+| Tecnología | Navegador / Chrome | Flutter + Android |
+| Música local | Carpeta del navegador | Acceso directo al almacenamiento |
+| Sensación | Página web | App instalada nativa |
+| Tamaño | ~3 MB (TWA) | ~20 MB |
 
-## Regenerar el APK
+## Instalar
+
+1. Descarga el APK en tu Android (ARM64: Samsung, Xiaomi, etc. recientes).
+2. Abre el archivo e instala.
+3. Activa **Instalar apps desconocidas** si Android lo pide.
+
+## Regenerar
 
 ```bash
 ./scripts/build-apk.sh
 ```
 
-Requisitos: `curl`, `unzip`, JDK 17, Android SDK Build Tools (`apksigner`).
-
-## Notas
-
-- La app es un contenedor de la web; los cambios en la PWA se ven sin reinstalar el APK.
-- Solo hace falta un APK nuevo si cambias icono, nombre o permisos Android.
-- El keystore de firma (`release.keystore`) no se sube a Git; se crea localmente al ejecutar el script.
+Requisitos: Flutter SDK, JDK 17, Android SDK.

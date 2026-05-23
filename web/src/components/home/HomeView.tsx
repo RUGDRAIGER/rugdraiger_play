@@ -170,7 +170,7 @@ export function HomeView({ onNavigate }: Props) {
         }}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 18H7v-2h10v2zM19 9h-1V7c0-1.1-.9-2-2-2H8C6.9 5 6 5.9 6 7v2H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2zm-5 6h-2v2h-2v-2H8v-2h2v-2h2v2h2v2z"/></svg>
-        Descargar app Android (APK)
+        Descargar app Android nativa
       </a>
 
       {/* Hidden inputs */}
