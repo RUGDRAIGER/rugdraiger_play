@@ -2,6 +2,8 @@ export const APP_NAME = 'Rugdraiger Play'
 
 const base = import.meta.env.BASE_URL
 
+export const APK_DOWNLOAD_URL = `${base}apk/rugdraiger-play.apk`
+
 export const APP_ICONS = {
   /** Icono principal (1024×1024) */
   app: `${base}icons/app-icon.png`,

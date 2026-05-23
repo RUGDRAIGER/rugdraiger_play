@@ -53,3 +53,9 @@ android-twa/*.keystore
 android-twa/app-release*.apk
 android-twa/app-release*.aab
 android-twa/local.properties
+
+# APK build artifacts (keep signed APK for download)
+apk/extracted/
+apk/*.zip
+apk/release.keystore
+apk/*-unsigned.*
