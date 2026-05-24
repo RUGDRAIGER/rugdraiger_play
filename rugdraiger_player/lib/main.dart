@@ -50,6 +50,7 @@ Future<void> _initPlatformServices() async {
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
       androidNotificationIcon: 'drawable/ic_stat_music_note',
+      notificationColor: AppColors.accent,
       preloadArtwork: true,
     );
     AudioPlayerService.backgroundEnabled = true;
