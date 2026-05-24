@@ -90,6 +90,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                         if (bitmap != null) {
                             views.setImageViewBitmap(R.id.widget_artwork, bitmap)
                             views.setImageViewBitmap(R.id.widget_artwork_bg, bitmap)
+                            views.setViewVisibility(R.id.widget_scrim, View.VISIBLE)
                         } else {
                             setDefaultArtwork(views)
                         }
@@ -124,6 +125,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         private fun setDefaultArtwork(views: RemoteViews) {
             views.setImageViewResource(R.id.widget_artwork, R.mipmap.ic_launcher)
             views.setImageViewResource(R.id.widget_artwork_bg, R.mipmap.ic_launcher)
+            views.setViewVisibility(R.id.widget_scrim, View.VISIBLE)
         }
 
         private fun pendingLaunch(context: Context, requestCode: Int): PendingIntent {
