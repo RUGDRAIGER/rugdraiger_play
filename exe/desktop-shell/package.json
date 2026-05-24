@@ -1,0 +1,41 @@
+{
+  "name": "rugdraiger-play-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rugdraiger Play - escritorio Windows (misma UI que la web/APK)",
+  "main": "main.js",
+  "scripts": {
+    "build:web": "cd ../../web && npm ci && VITE_CAPACITOR=true npm run build",
+    "pack:win": "npm run build:web && electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.rugdraiger.play.desktop",
+    "productName": "Rugdraiger Play",
+    "directories": {
+      "output": "../RugdraigerPlay-Portable"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "../web/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../../web/dist",
+        "to": "app",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": ["portable"],
+      "artifactName": "RugdraigerPlay-Portable.exe"
+    },
+    "portable": {
+      "artifactName": "RugdraigerPlay-Portable.exe"
+    }
+  }
+}
