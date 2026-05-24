@@ -10,22 +10,12 @@
 - **Descarga:** https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
 - Rama `main` y `gh-pages` publicadas
 
-### Versión escritorio Windows (en progreso)
-- Código Flutter adaptado para Windows/macOS en `rugdraiger_player/`
-- Carpeta `exe/` con scripts de build
-- **Limitación:** el `.exe` nativo Flutter **solo se genera en un PC Windows** (no desde Mac)
-- Compilación macOS probada OK: `Rugdraiger Play.app`
-
-### Pendiente al reiniciar Cursor
-1. **EXE Windows nativo (Flutter):** ejecutar en PC Windows:
-   - `exe\INSTALAR-Y-GENERAR-EXE.bat`
-   - O `exe\build-windows.ps1`
-2. **EXE portable (Electron):** alternativa desde Mac en `exe/desktop-shell/`:
-   - `npm run pack:win` (genera `exe/RugdraigerPlay-Portable/RugdraigerPlay-Portable.exe`)
-   - Build interrumpido — reintentar si hace falta
-3. **GitHub Actions Windows:** archivo plantilla en `exe/build-windows-exe.workflow.yml`
-   - Copiar a `.github/workflows/` requiere token con scope `workflow`
-4. **No subir a GitHub** hasta confirmación del usuario (excepto commit local)
+### Versión escritorio Windows ✅ LISTA
+- **ZIP para instalar:** `exe/RugdraigerPlay-Windows.zip` (~248 MB)
+- **Ejecutable:** `exe/RugdraigerPlay/Rugdraiger Play-win32-x64/Rugdraiger Play.exe`
+- Instrucciones: `exe/COMO-INSTALAR-EN-WINDOWS.txt`
+- Build con `@electron/packager` (misma UI web/APK)
+- Versión Flutter nativa: `exe/INSTALAR-Y-GENERAR-EXE.bat` (solo en PC Windows)
 
 ## Último commit
 ```

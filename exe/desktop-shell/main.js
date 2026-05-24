@@ -21,7 +21,7 @@ function createWindow() {
 
   const indexPath = isDev
     ? path.join(__dirname, '../../../web/dist/index.html')
-    : path.join(process.resourcesPath, 'app/index.html');
+    : path.join(process.resourcesPath, 'dist/index.html');
 
   win.loadFile(indexPath).catch((err) => {
     console.error(err);

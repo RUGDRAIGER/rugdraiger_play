@@ -5,37 +5,13 @@
   "description": "Rugdraiger Play - escritorio Windows (misma UI que la web/APK)",
   "main": "main.js",
   "scripts": {
-    "build:web": "cd ../../web && npm ci && VITE_CAPACITOR=true npm run build",
-    "pack:win": "npm run build:web && electron-builder --win portable --x64"
+    "build:web": "cd ../../web && VITE_CAPACITOR=true npm run build",
+    "pack:win": "npm run build:web && npm run pack:win:only",
+    "pack:win:only": "electron-packager . \"Rugdraiger Play\" --platform=win32 --arch=x64 --out=../RugdraigerPlay --overwrite --ignore=\"node_modules|package-lock.json|\\.git\" --extra-resource=../../web/dist",
+    "zip:win": "cd ../RugdraigerPlay && zip -r ../RugdraigerPlay-Windows.zip \"Rugdraiger Play-win32-x64\""
   },
   "devDependencies": {
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8"
-  },
-  "build": {
-    "appId": "com.rugdraiger.play.desktop",
-    "productName": "Rugdraiger Play",
-    "directories": {
-      "output": "../RugdraigerPlay-Portable"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "../web/dist/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "../../web/dist",
-        "to": "app",
-        "filter": ["**/*"]
-      }
-    ],
-    "win": {
-      "target": ["portable"],
-      "artifactName": "RugdraigerPlay-Portable.exe"
-    },
-    "portable": {
-      "artifactName": "RugdraigerPlay-Portable.exe"
-    }
+    "@electron/packager": "^18.4.4",
+    "electron": "^33.2.1"
   }
 }

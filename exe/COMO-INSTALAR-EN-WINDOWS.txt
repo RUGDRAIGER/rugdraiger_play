@@ -1,0 +1,37 @@
+═══════════════════════════════════════════════════════════
+  RUGDRAIGER PLAY — INSTALAR EN WINDOWS
+═══════════════════════════════════════════════════════════
+
+OPCIÓN A — ZIP (recomendada, lista para usar)
+────────────────────────────────────────────
+1. Copia el archivo  RugdraigerPlay-Windows.zip  a tu PC Windows
+2. Clic derecho → Extraer todo
+3. Abre la carpeta  Rugdraiger Play-win32-x64
+4. Doble clic en  Rugdraiger Play.exe
+5. (Opcional) Clic derecho en el .exe → Enviar a → Escritorio (crear acceso directo)
+
+OPCIÓN B — Carpeta ya descomprimida
+────────────────────────────────────────────
+Ruta en este proyecto:
+  exe/RugdraigerPlay/Rugdraiger Play-win32-x64/Rugdraiger Play.exe
+
+Copia TODA la carpeta  Rugdraiger Play-win32-x64  a Windows.
+No muevas solo el .exe (necesita las DLL y la carpeta resources).
+
+OPCIÓN C — Versión nativa Flutter (máximo rendimiento)
+────────────────────────────────────────────
+En un PC Windows con Flutter + Visual Studio 2022:
+  Doble clic en  exe/INSTALAR-Y-GENERAR-EXE.bat
+
+═══════════════════════════════════════════════════════════
+  PRIMER USO
+═══════════════════════════════════════════════════════════
+• La app escanea automáticamente tu carpeta Música y Descargas
+• También puedes usar  Escanear carpeta  en la pantalla Inicio
+• Mismo diseño negro/rojo que la APK y la web
+
+NOTA: Windows puede mostrar "Windows protegió tu PC" la primera vez.
+  → Más información → Ejecutar de todas formas
+  (es normal en apps no firmadas digitalmente)
+
+═══════════════════════════════════════════════════════════
