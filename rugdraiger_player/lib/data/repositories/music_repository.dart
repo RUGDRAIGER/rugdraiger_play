@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:on_audio_query/on_audio_query.dart' as oaq;
 import 'package:path/path.dart' as path_lib;
 import '../../core/constants/app_constants.dart';
+import '../../services/filename_metadata.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
 import '../sources/database_helper.dart';
@@ -57,16 +58,38 @@ class MusicRepository {
       orElse: () => AudioFormat.unknown,
     );
 
+    final filePath = song.data.isNotEmpty ? song.data : (song.uri ?? song.data);
+    final inferred = inferMetadataFromPath(filePath);
+    final meta = resolveArtworkMeta(
+      title: song.title,
+      artist: song.artist ?? '',
+      album: song.album ?? '',
+      filePath: filePath,
+    );
+
+    final title = meta.title.isNotEmpty ? meta.title : 'Unknown Title';
+    final artist = isGenericArtist(meta.artist)
+        ? (inferred.artist?.trim().isNotEmpty == true
+            ? inferred.artist!.trim()
+            : 'Unknown Artist')
+        : meta.artist;
+    final album = isGenericAlbum(meta.album)
+        ? (inferred.album?.trim().isNotEmpty == true &&
+                !isGenericAlbum(inferred.album)
+            ? inferred.album!.trim()
+            : (!isGenericArtist(artist) ? artist : 'Unknown Album'))
+        : meta.album;
+
     return SongModel(
       id: song.id,
-      title: song.title,
-      artist: song.artist ?? 'Unknown Artist',
-      album: song.album ?? 'Unknown Album',
+      title: title,
+      artist: artist,
+      album: album,
       genre: song.genre ?? '',
-      filePath: song.uri ?? song.data,
+      filePath: filePath,
       durationMs: song.duration ?? 0,
       fileSize: song.size,
-      trackNumber: song.track ?? 0,
+      trackNumber: song.track ?? inferred.track ?? 0,
       format: format,
       isLossless: isLossless,
       dateAdded: DateTime.fromMillisecondsSinceEpoch(
@@ -94,14 +117,16 @@ class MusicRepository {
       );
 
       final name = path_lib.basenameWithoutExtension(file.path);
+      final inferred = inferMetadataFromPath(file.path);
       songs.add(SongModel(
         id: id++,
-        title: name,
-        artist: 'Unknown Artist',
-        album: 'Unknown Album',
+        title: inferred.title ?? name,
+        artist: inferred.artist ?? 'Unknown Artist',
+        album: inferred.album ?? 'Unknown Album',
         filePath: file.path,
         durationMs: 0,
         fileSize: await file.length(),
+        trackNumber: inferred.track ?? 0,
         format: format,
         isLossless: isLossless,
         dateAdded: await file.lastModified(),
@@ -140,6 +165,11 @@ class MusicRepository {
       _db.getRecentlyPlayed(limit: limit);
 
   Future<List<SongModel>> getFavoriteSongs() => _db.getFavoriteSongs();
+
+  Future<bool> isFavorite(int songId) => _db.isFavorite(songId);
+
+  Future<List<SongModel>> getMostPlayed({int limit = 4}) =>
+      _db.getMostPlayed(limit: limit);
 
   Future<List<SongModel>> getSongsByAlbum(String album) => _db.getSongsByAlbum(album);
 

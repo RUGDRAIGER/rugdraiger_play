@@ -86,7 +86,9 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                         final coverSong = coverSongs.isEmpty ? null : coverSongs.first;
                         return AlbumCard(
                           title: album,
-                          subtitle: '',
+                          subtitle: coverSongs.length == 1
+                              ? coverSong!.artist
+                              : '${coverSongs.length} canciones',
                           artwork: coverSong != null
                               ? ArtworkWidget(song: coverSong, size: double.infinity, borderRadius: 0)
                               : null,

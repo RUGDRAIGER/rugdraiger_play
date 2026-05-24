@@ -2,7 +2,8 @@
 RUGDRAIGER PLAY — DOCUMENTO DE ENTREGA PARA OTRA IA
 ================================================================================
 Repositorio: https://github.com/RUGDRAIGER/rugdraiger_play
-Fecha referencia: mayo 2026
+  Fecha referencia: mayo 2026
+  Última actualización documentada: 23 mayo 2026 — carátulas APK + deploy gh-pages
 
 Este archivo describe SOLO:
   A) La aplicación WEB (referencia de diseño y funcionalidad)
@@ -137,7 +138,39 @@ A) PÁGINA WEB — Rugdraiger Play
   dbService.ts        — Dexie: songs, playlists, songBlobs, songArtworks
   audioService.ts     — HTML audio + cadena BiquadFilter EQ
   artworkService.ts   — tags embebidos + backfill iTunes Search API
+                        (fetchArtworkUrl, enrichSongsArtwork, pickBestMatch)
+  artworkFileService.ts — cache URLs locales (local://) y resolución src
   audioFileService.ts — cache blobs en memoria
+
+--- Carátulas en la WEB (referencia para la APK) ---
+
+  Flujo en ArtworkDisplay (web/src/components/ui/ArtworkDisplay.tsx):
+    1) resolveArtworkSrc() — artwork embebido del escaneo (jsmediatags APIC)
+    2) Si no hay imagen → fetchArtworkUrl() vía iTunes Search API
+    3) Al encontrar URL → updateSongArtwork() + cache en store/IndexedDB
+
+  artworkService.ts — lógica iTunes:
+    - normalizeQuery() limpia paréntesis/corchetes del título
+    - isGenericAlbum(): vacío o "unknown album" (NO trata "Music" como genérico)
+    - isGenericArtist(): vacío o "unknown artist"
+    - Orden de búsqueda fetchArtworkUrl():
+        a) Si hay título y álbum genérico → song: "{artist} {title}"
+        b) Si álbum conocido → album: "{artist} {album}"
+        c) Fallback → song: "{artist} {title}"
+    - pickBestMatch(): puntúa artista/álbum/título; si score=0 usa results[0]
+    - upgradeArtworkSize(): URLs 100x100 → 600x600
+
+  scannerService.ts — metadata para carátulas:
+    - jsmediatags lee APIC/picture del archivo
+    - inferMetadataFromPath() + parseFilenameMetadata() desde nombre/ruta
+    - Ejemplo: "Fire Force - Opening 1  Inferno.mp3"
+        → artista: Fire Force, título: Opening 1 Inferno
+    - enrichSongsArtwork() en libraryStore tras cargar/escanear biblioteca
+
+  backfillArtworks() en libraryStore:
+    - Recorre canciones sin artwork
+    - Comparte carátula por álbum si artista/álbum no son genéricos
+    - Delay 120 ms entre peticiones iTunes
 
 --- Formatos soportados (web) ---
 
@@ -185,8 +218,94 @@ B) APP ANDROID NATIVA — Flutter (última versión)
 
   Archivo: apk/rugdraiger-play.apk (~25 MB ARM64)
   URL: https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
+  Página: https://rugdraiger.github.io/rugdraiger_play/
   Build: ./scripts/build-apk.sh (Flutter, JDK 17, Android SDK, compileSdk 36)
   Copia web: web/public/apk/rugdraiger-play.apk
+  Deploy gh-pages: ./scripts/deploy-pwa.sh (o push manual desde web/dist)
+  Último deploy gh-pages: 23 mayo 2026 (commit cbe62d1 — APK con carátulas iTunes)
+
+--- Cambios recientes APK (23 mayo 2026) — RESUMEN ---
+
+  PROBLEMA:
+    La canción de prueba "Fire Force - Opening 1  Inferno.mp3" reproducía bien
+    pero NO mostraba carátula (placeholder con nota musical).
+    MediaStore devolvía artista "<unknown>", álbum "Music", sin APIC válido.
+    El MP3 no tiene carátula embebida real (JPEG en binario son falsos positivos).
+
+  SOLUCIÓN (paridad con la web):
+    Replicar el flujo web: inferir metadata del nombre de archivo + iTunes fallback.
+
+  ARCHIVOS NUEVOS:
+    lib/services/filename_metadata.dart
+      - Port de parseFilenameMetadata / inferMetadataFromPath (scannerService web)
+      - resolveArtworkMeta() combina tags MediaStore + inferencia del path
+      - isGenericArtist(): unknown artist, <unknown>, unknown
+      - isGenericAlbum(): unknown album, music (carpeta genérica MediaStore)
+
+    lib/services/artwork_fetcher.dart
+      - Port de artworkService.ts (iTunes Search API)
+      - fetchForSong() descarga bytes JPEG/PNG desde artworkUrl600/100
+      - Misma secuencia de búsqueda que fetchArtworkUrl() en la web
+      - Cache en memoria por canción/álbum
+
+    lib/services/embedded_artwork_extractor.dart
+      - Extrae APIC de ID3v2 + escaneo JPEG/PNG validado
+      - Validación isValidJpeg() evita falsos positivos del stream MP3
+      - En Android usa MethodChannel nativo (no pasa el MP3 entero por canal)
+
+    test/artwork_fire_force_test.dart
+      - Verifica inferencia "Fire Force" desde nombre de archivo
+      - Verifica descarga carátula iTunes para Fire Force Inferno
+
+  ARCHIVOS MODIFICADOS:
+    lib/services/artwork_cache.dart
+      - loadForSong(): cache → MediaStore queryArtwork → embebido → iTunes
+      - enrichAll() equivalente a enrichSongsArtwork() de la web
+      - Cache por canción y por álbum (_albumCache)
+      - prefetchAll() delega en enrichAll()
+
+    lib/presentation/widgets/artwork_widget.dart
+      - Ya NO depende de QueryArtworkWidget (IDs sintéticos fallaban)
+      - Image.memory con errorBuilder → reintento remoto
+      - Placeholder con CircularProgressIndicator mientras carga
+      - LargeArtworkWidget con misma lógica
+
+    lib/data/repositories/music_repository.dart
+      - _fromOaqSong(): infiere artista/álbum/título desde filePath si genéricos
+      - scanDirectory(): usa inferMetadataFromPath() al indexar carpeta
+      - filePath prioriza song.data (ruta filesystem) sobre content:// URI
+      - resolveForPlayback() mantiene resolución URI content:// para play
+
+    lib/presentation/bloc/library/library_bloc.dart
+      - ClearLibraryEvent + botón "Limpiar biblioteca" (doble confirmación)
+      - Tras LoadLibrary → ArtworkCache.prefetchAll() / enrichAll()
+
+    lib/main.dart
+      - _PermissionGate: pantalla obligatoria "PERMITIR ACCESO" al abrir
+      - JustAudioBackground.init() en main() antes de runApp()
+      - autoScanOnStart en MainScaffold si biblioteca vacía
+
+    lib/services/permission_service.dart (nuevo en iteración previa)
+      - hasMediaAccess / requestMediaAccess vía on_audio_query + permission_handler
+      - READ_MEDIA_AUDIO + READ_MEDIA_IMAGES para queryArtwork
+
+    android/.../MainActivity.kt
+      - Extiende AudioServiceActivity (requerido por just_audio_background)
+      - MethodChannel "rugdraiger/artwork" → extractArtwork(path)
+      - Lee content:// y filesystem nativamente; extrae JPEG/PNG/ID3 APIC
+
+    pubspec.yaml
+      - Dependencia explícita: http ^1.2.2 (peticiones iTunes)
+
+  PRUEBA VERIFICADA (emulador Android 34):
+    - Archivo: apk/Fire Force - Opening 1  Inferno.mp3
+    - Tras escanear: artista "Fire Force", carátula Inferno visible en lista
+    - Tests: flutter test test/artwork_fire_force_test.dart → OK
+
+  CANCIÓN DE PRUEBA:
+    Local: apk/Fire Force - Opening 1  Inferno.mp3
+    Downloads: ~/Downloads/Fire Force - Opening 1  Inferno.mp3
+    Nota: NO tiene APIC ID3 válido; carátula viene de iTunes (Mrs. GREEN APPLE / Inferno)
 
 --- Stack tecnológico ---
 
@@ -196,7 +315,35 @@ B) APP ANDROID NATIVA — Flutter (última versión)
   Escaneo: on_audio_query (MediaStore) + file_picker (carpeta específica)
   Audio: just_audio + just_audio_background + audio_session
   EQ UI: EqualizerService (SharedPreferences) — UI estilo web; DSP nativo limitado
-  Permisos: permission_handler (READ_MEDIA_AUDIO, notificaciones)
+  Permisos: permission_handler + on_audio_query (READ_MEDIA_AUDIO, READ_MEDIA_IMAGES)
+  HTTP: http (iTunes Search API para carátulas)
+  MainActivity: AudioServiceActivity + MethodChannel artwork nativo
+
+--- Carátulas en la APK (paridad con web) ---
+
+  Orden de resolución (ArtworkCache.loadForSong):
+    1) Cache memoria (ArtworkCache.get)
+    2) song.artwork en memoria (si existiera)
+    3) Cache por álbum (_albumCache)
+    4) MediaStore queryArtwork (JPEG y PNG, id MediaStore real)
+    5) Extracción embebida del archivo (EmbeddedArtworkExtractor + Kotlin nativo)
+    6) iTunes Search API (ArtworkFetcher — igual que artworkService.ts web)
+
+  ArtworkWidget / LargeArtworkWidget:
+    - Muestra Image.memory cuando hay bytes
+    - Spinner mientras carga; placeholder nota musical si falla todo
+    - errorBuilder reintenta carga remota
+
+  Metadata para búsqueda iTunes:
+    - Si MediaStore dice "<unknown>" / "Music", se infiere del nombre archivo
+    - "Fire Force - Opening 1  Inferno.mp3" → artista Fire Force, título con Inferno
+    - Sin inferencia, iTunes no encuentra carátula (término "<unknown> ..." falla)
+
+  Limitaciones conocidas:
+    - Carátulas iTunes requieren INTERNET en el dispositivo
+    - No se persisten bytes de carátula en SQLite (solo cache sesión en memoria)
+    - MP3 sin APIC y sin match iTunes → placeholder
+    - queryArtwork MediaStore suele fallar si no hay arte indexado en el sistema
 
 --- Identidad visual (lib/core/theme/app_colors.dart) ---
 
@@ -223,6 +370,7 @@ B) APP ANDROID NATIVA — Flutter (última versión)
     - AppIconWidget + stats
     - "Escanear biblioteca" (MediaStore completo)
     - "Elegir carpeta" (file_picker getDirectoryPath → scanDirectory)
+    - "Limpiar biblioteca" (doble confirmación, ClearLibraryEvent)
     - Recientes, preview álbumes
 
   LibraryHubScreen     lib/presentation/screens/library/library_hub_screen.dart
@@ -267,7 +415,7 @@ B) APP ANDROID NATIVA — Flutter (última versión)
   LibraryBloc:
     LoadLibrary, ScanLibrary, ScanFolder(path), SearchSongs,
     CreatePlaylist, AddSongToPlaylist, DeletePlaylist,
-    DeleteSong, RemoveSongFromPlaylist
+    DeleteSong, RemoveSongFromPlaylist, ClearLibrary
 
   PlayerBloc:
     PlaySong, Pause, TogglePlayPause, Seek, SkipNext/Prev,
@@ -275,30 +423,48 @@ B) APP ANDROID NATIVA — Flutter (última versión)
 
 --- Servicios ---
 
-  audio_service.dart      — just_audio, URIs file/content, cola, volumen, mute
-  music_repository.dart   — escaneo MediaStore + carpeta, CRUD SQLite
-  database_helper.dart    — songs, playlists, playlist_songs, recently_played
-  equalizer_service.dart  — presets/bandas en SharedPreferences
+  audio_service.dart           — just_audio, URIs file/content, cola, volumen, mute
+  music_repository.dart        — escaneo MediaStore + carpeta, inferencia metadata path
+  database_helper.dart         — songs, playlists, playlist_songs, recently_played
+  equalizer_service.dart       — presets/bandas en SharedPreferences
+  permission_service.dart      — permisos media al abrir (obligatorio)
+  artwork_cache.dart           — cache carátulas + enrichAll tras cargar biblioteca
+  artwork_fetcher.dart         — iTunes Search API (port web artworkService.ts)
+  embedded_artwork_extractor.dart — ID3 APIC + JPEG/PNG embebido validado
+  filename_metadata.dart       — inferencia artista/álbum/título desde path (port web)
 
 --- Reproducción audio (Flutter) ---
 
+  - MainActivity extiende AudioServiceActivity (obligatorio just_audio_background)
+  - JustAudioBackground.init() en main() ANTES de runApp()
   - Rutas: Uri.file() o Uri.parse(content://...)
-  - Validación archivo existe antes de play
+  - resolveForPlayback() re-resuelve URI content:// fresco desde MediaStore
   - ConcatenatingAudioSource + MediaItem (just_audio_background)
-  - Fallback sin MediaItem si falla background init
-  - audio_session configurado en main.dart (AudioSessionConfiguration.music)
+  - Fallback playlist/URI individual si falla background tag
+  - audio_session.setActive(true) antes de reproducir
   - Notificación Android foreground al reproducir
   - Errores visibles en mini player (errorMessage)
+
+--- Permisos al abrir (Flutter) ---
+
+  - Pantalla _PermissionGate en main.dart (no se puede omitir)
+  - Botón "PERMITIR ACCESO" → PermissionService.requestMediaAccess()
+  - Si denegado permanente → "ABRIR AJUSTES"
+  - Tras conceder → MainScaffold(autoScanOnStart: true) si biblioteca vacía
+  - AndroidManifest: READ_MEDIA_AUDIO, READ_MEDIA_IMAGES, READ_EXTERNAL_STORAGE (≤32)
 
 --- Escaneo biblioteca (Flutter) ---
 
   1) ScanLibraryEvent → on_audio_query querySongs (todo el dispositivo)
+     + inferencia metadata desde filePath (_fromOaqSong)
   2) ScanFolderEvent → file_picker carpeta → scanDirectory recursivo
+     + inferencia metadata desde path
+  3) Tras cargar → ArtworkCache.enrichAll() precarga carátulas (MediaStore + iTunes)
   Formatos: mp3, flac, aac, wav, ogg, m4a, alac, aiff, opus, wma
 
 --- Formatos / permisos Android ---
 
-  AndroidManifest: READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE (≤32),
+  AndroidManifest: READ_MEDIA_AUDIO, READ_MEDIA_IMAGES, READ_EXTERNAL_STORAGE (≤32),
   INTERNET, WAKE_LOCK, FOREGROUND_SERVICE, FOREGROUND_SERVICE_MEDIA_PLAYBACK,
   POST_NOTIFICATIONS
   compileSdk: 36 (app + subprojects en android/build.gradle.kts)
@@ -306,8 +472,11 @@ B) APP ANDROID NATIVA — Flutter (última versión)
 --- Widgets UI clave ---
 
   AppIconWidget, VolumeFader, EqBandFader, SongActionsSheet,
-  ArtworkWidget (QueryArtworkWidget), AlbumCard, SongListTile,
-  BottomNavBar, MobileNavDrawer
+  ArtworkWidget, LargeArtworkWidget (Image.memory + iTunes fallback),
+  AlbumCard, SongListTile, BottomNavBar, MobileNavDrawer
+
+  NOTA: ArtworkWidget ya NO usa QueryArtworkWidget como fallback principal.
+  QueryArtworkWidget fallaba con IDs sintéticos de scanDirectory y sin arte MediaStore.
 
 --- Archivos obsoletos / no usar para APK ---
 
@@ -318,8 +487,10 @@ B) APP ANDROID NATIVA — Flutter (última versión)
 --- Comandos útiles ---
 
   Analizar Flutter:  cd rugdraiger_player && flutter analyze
+  Test carátulas:    cd rugdraiger_player && flutter test test/artwork_fire_force_test.dart
   APK release:       ./scripts/build-apk.sh
   Publicar web+APK:  ./scripts/deploy-pwa.sh
+                     (push gh-pages desde web/dist con apk/rugdraiger-play.apk)
 
 --- Paridad web ↔ Flutter (estado actual) ---
 
@@ -331,15 +502,42 @@ B) APP ANDROID NATIVA — Flutter (última versión)
     - VolumeFader en mini/full player
     - EQ faders verticales UI
     - Icono app real
-    - Reproducción nativa con just_audio
+    - Reproducción nativa con just_audio + AudioServiceActivity
+    - Permisos obligatorios al abrir
+    - Limpiar biblioteca (HomeScreen)
+    - Inferencia metadata desde nombre/ruta de archivo (port web scannerService)
+    - Carátulas: embebidas + iTunes + MediaStore (solo álbum real, port web artworkService)
+    - Carga carátulas bajo demanda en widgets (sin prefetch masivo al escanear)
+    - Reproductor full: sin menú ⋮ ni barra inferior (LIKE/LYRICS/QUEUE/OUTPUT)
+    - Botón corazón funcional → sección Me gusta en Inicio + pantalla Favoritos
+    - Sección Lo más escuchado (top 4 por play_count) en Inicio
+    - Mini player sin barra de volumen
+    - Reproductor: menú ⋮ con «Buscar imagen de carátula» (iTunes + persistencia en disco)
+    - Layout responsivo en reproductor (compacto para pantallas ~720×1600)
 
   DIFERENCIAS / pendientes vs web:
     - Web: File System Access API / picker navegador; Flutter: MediaStore + file_picker
     - Web: EQ procesa audio (Web Audio API); Flutter: EQ guarda prefs, no DSP nativo completo
-    - Web: artwork iTunes backfill; Flutter: artwork desde MediaStore
+    - Web: artwork persistido en IndexedDB (URLs/data); Flutter: cache solo en memoria
+    - Web: jsmediatags APIC en cliente; Flutter: ID3 nativo + iTunes si no hay APIC
     - Web: Dexie blobs por canción; Flutter: paths URI del sistema
     - Web: sidebar desktop; Flutter: solo layout móvil
     - Web: PWA offline; Flutter: app instalada APK
+    - Carátulas iTunes en APK requieren conexión a internet
+
+--- Bugs corregidos (historial relevante) ---
+
+  | Problema                         | Causa                          | Fix                          |
+  |----------------------------------|--------------------------------|------------------------------|
+  | No reproduce                     | MainActivity + init audio      | AudioServiceActivity + main()|
+  | Eliminar canción no funciona     | context tras Navigator.pop     | rootContext en song_actions  |
+  | Permisos insuficientes           | Faltaba READ_MEDIA_IMAGES      | Manifest + PermissionService |
+  | Sin carátula Fire Force Inferno  | Metadata <unknown> + sin APIC| filename_metadata + iTunes   |
+  | JPEG falso en MP3                | Stream MP3 parece JPEG         | isValidJpeg() + iTunes       |
+  | MethodChannel fallaba con MP3    | APK 2MB excede límite canal    | extractArtwork nativo Kotlin |
+  | Carátulas clonadas (4 canciones) | MediaStore mismo álbum "Music" | iTunes por canción + cache songId |
+  | ANR al abrir lista Canciones     | querySongs + prefetch paralelo | cola serial + sin prefetch + skip query |
+  | Álbum home muestra "0"           | MediaStore album id numérico   | isGenericAlbum + fallback artista |
 
 --- Objetivo para otra IA ---
 

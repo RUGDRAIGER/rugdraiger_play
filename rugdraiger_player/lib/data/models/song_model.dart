@@ -18,6 +18,8 @@ class SongModel {
   final AudioFormat format;
   final bool isLossless;
   final DateTime dateAdded;
+  final int playCount;
+  final bool isFavorite;
   final Uint8List? artwork;
 
   const SongModel({
@@ -37,6 +39,8 @@ class SongModel {
     this.format = AudioFormat.mp3,
     this.isLossless = false,
     required this.dateAdded,
+    this.playCount = 0,
+    this.isFavorite = false,
     this.artwork,
   });
 
@@ -77,6 +81,8 @@ class SongModel {
     AudioFormat? format,
     bool? isLossless,
     DateTime? dateAdded,
+    int? playCount,
+    bool? isFavorite,
     Uint8List? artwork,
   }) {
     return SongModel(
@@ -96,6 +102,8 @@ class SongModel {
       format: format ?? this.format,
       isLossless: isLossless ?? this.isLossless,
       dateAdded: dateAdded ?? this.dateAdded,
+      playCount: playCount ?? this.playCount,
+      isFavorite: isFavorite ?? this.isFavorite,
       artwork: artwork ?? this.artwork,
     );
   }
@@ -144,6 +152,8 @@ class SongModel {
       dateAdded: DateTime.fromMillisecondsSinceEpoch(
         map['date_added'] as int? ?? 0,
       ),
+      playCount: map['play_count'] as int? ?? 0,
+      isFavorite: (map['is_favorite'] as int? ?? 0) == 1,
     );
   }
 

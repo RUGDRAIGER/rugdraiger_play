@@ -44,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
               slivers: [
                 _buildHeader(),
                 _buildScanSection(),
+                _buildMostPlayed(),
+                _buildFavorites(),
                 _buildRecentlyPlayed(),
                 _buildAlbumPreview(),
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -197,6 +199,111 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildMostPlayed() {
+    return BlocBuilder<LibraryBloc, LibraryBlocState>(
+      builder: (context, state) {
+        if (state.mostPlayed.isEmpty) return const SliverToBoxAdapter();
+        final items = state.mostPlayed.take(4).toList();
+        return SliverToBoxAdapter(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final isNarrow = width < 400;
+              final tileWidth = isNarrow ? (width - 44) / 2 : (width - 56) / 2;
+              final tileHeight = tileWidth + 52;
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.trending_up_rounded, color: AppColors.neonRed, size: 22),
+                        const SizedBox(width: 8),
+                        Text('Lo más escuchado', style: AppTextStyles.headlineMedium),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: List.generate(items.length, (index) {
+                        final song = items[index];
+                        return SizedBox(
+                          width: tileWidth,
+                          height: tileHeight,
+                          child: _MostPlayedTile(
+                            rank: index + 1,
+                            song: song,
+                            playCount: song.playCount,
+                            onTap: () => _playSong(context, song, items, index),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFavorites() {
+    return BlocBuilder<LibraryBloc, LibraryBlocState>(
+      builder: (context, state) {
+        if (state.favorites.isEmpty) return const SliverToBoxAdapter();
+        final preview = state.favorites.take(6).toList();
+        return SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.favorite_rounded, color: AppColors.neonRed, size: 20),
+                        const SizedBox(width: 8),
+                        Text('Me gusta', style: AppTextStyles.headlineMedium),
+                      ],
+                    ),
+                    if (state.favorites.isNotEmpty)
+                      TextButton(
+                        onPressed: () => widget.onNavigate?.call(ViewName.favorites),
+                        child: Text('Ver todos', style: AppTextStyles.neonLabel),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 128,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: preview.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final song = preview[index];
+                    return _FavoritePreviewTile(
+                      song: song,
+                      onTap: () => _playSong(context, song, state.favorites, index),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildRecentlyPlayed() {
     return BlocBuilder<LibraryBloc, LibraryBlocState>(
       builder: (context, state) {
@@ -283,7 +390,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   final coverSong = coverSongs.isEmpty ? null : coverSongs.first;
                   return AlbumCard(
                     title: album,
-                    subtitle: '',
+                    subtitle: coverSongs.length == 1
+                        ? coverSong!.artist
+                        : '${coverSongs.length} canciones',
                     artwork: coverSong != null
                         ? ArtworkWidget(song: coverSong, size: double.infinity, borderRadius: 0)
                         : null,
@@ -301,6 +410,153 @@ class _HomeScreenState extends State<HomeScreen> {
   void _playSong(BuildContext context, SongModel song, List<SongModel> songs, int index) {
     context.read<PlayerBloc>().add(PlaySongEvent(song, queue: songs, index: index));
     openFullPlayer(context);
+  }
+}
+
+class _MostPlayedTile extends StatelessWidget {
+  final int rank;
+  final SongModel song;
+  final int playCount;
+  final VoidCallback onTap;
+
+  const _MostPlayedTile({
+    required this.rank,
+    required this.song,
+    required this.playCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border, width: 0.5),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ArtworkWidget(
+                    key: ValueKey('top-artwork-${song.id}'),
+                    song: song,
+                    size: double.infinity,
+                    borderRadius: 0,
+                  ),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.neonRed,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '$rank',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (playCount > 0)
+                    Positioned(
+                      bottom: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${playCount}x',
+                          style: AppTextStyles.labelSmall.copyWith(fontSize: 9),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    song.title,
+                    style: AppTextStyles.titleMedium.copyWith(fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    song.artist,
+                    style: AppTextStyles.bodyMedium.copyWith(fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FavoritePreviewTile extends StatelessWidget {
+  final SongModel song;
+  final VoidCallback onTap;
+
+  const _FavoritePreviewTile({required this.song, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 88,
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                ArtworkWidget(song: song, size: 80, borderRadius: 10),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Icon(
+                    Icons.favorite_rounded,
+                    color: AppColors.neonRed,
+                    size: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              song.title,
+              style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

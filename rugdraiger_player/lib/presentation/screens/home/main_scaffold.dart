@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/navigation/view_name.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../bloc/library/library_bloc.dart';
+import '../../bloc/player/player_bloc.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/mini_player.dart';
 import '../../widgets/mobile_nav_drawer.dart';
@@ -12,6 +13,7 @@ import '../equalizer/equalizer_screen.dart';
 import '../home/home_screen.dart';
 import '../library/albums_screen.dart';
 import '../library/artists_screen.dart';
+import '../library/favorites_screen.dart';
 import '../library/library_hub_screen.dart';
 import '../library/songs_screen.dart';
 import '../playlist/playlists_screen.dart';
@@ -67,6 +69,8 @@ class _MainScaffoldState extends State<MainScaffold> {
         return const ArtistsScreen();
       case ViewName.playlists:
         return const PlaylistsScreen();
+      case ViewName.favorites:
+        return const FavoritesScreen();
       case ViewName.equalizer:
         return const EqualizerScreen();
       case ViewName.search:
@@ -76,9 +80,15 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<LibraryBloc, LibraryBlocState>(
-      listener: (context, state) => _maybeAutoScan(state),
-      child: Scaffold(
+    return BlocListener<PlayerBloc, PlayerBlocState>(
+      listenWhen: (prev, curr) =>
+          prev.currentSong?.id != curr.currentSong?.id && curr.currentSong != null,
+      listener: (context, _) {
+        context.read<LibraryBloc>().add(const RefreshPlayStatsEvent());
+      },
+      child: BlocListener<LibraryBloc, LibraryBlocState>(
+        listener: (context, state) => _maybeAutoScan(state),
+        child: Scaffold(
         backgroundColor: AppColors.background,
         body: Stack(
           children: [
@@ -108,6 +118,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               onClose: () => setState(() => _drawerOpen = false),
             ),
           ],
+        ),
         ),
       ),
     );

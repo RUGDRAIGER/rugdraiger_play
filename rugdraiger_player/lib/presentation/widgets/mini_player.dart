@@ -6,7 +6,6 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/duration_formatter.dart';
 import '../bloc/player/player_bloc.dart';
 import 'artwork_widget.dart';
-import 'volume_fader.dart';
 
 class MiniPlayer extends StatelessWidget {
   final VoidCallback? onTap;
@@ -96,13 +95,6 @@ class MiniPlayer extends StatelessWidget {
                         icon: const Icon(Icons.skip_next_rounded, size: 22),
                         color: AppColors.textSecondary,
                         onPressed: () => context.read<PlayerBloc>().add(const SkipNextEvent()),
-                      ),
-                      VolumeFader(
-                        volume: state.volume,
-                        isMuted: state.isMuted,
-                        width: 80,
-                        onVolumeChange: (v) => context.read<PlayerBloc>().add(SetVolumeEvent(v)),
-                        onToggleMute: () => context.read<PlayerBloc>().add(const ToggleMuteEvent()),
                       ),
                     ],
                   ),

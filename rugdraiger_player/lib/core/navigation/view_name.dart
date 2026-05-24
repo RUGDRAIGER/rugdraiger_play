@@ -5,6 +5,7 @@ enum ViewName {
   albums,
   artists,
   playlists,
+  favorites,
   equalizer,
   search,
 }

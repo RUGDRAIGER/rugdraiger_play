@@ -5,7 +5,10 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/duration_formatter.dart';
-import '../../bloc/player/player_bloc.dart';
+import '../../../data/models/song_model.dart';
+import '../../../services/artwork_cache.dart';
+import '../../bloc/library/library_bloc.dart';
+import '../../bloc/player/player_bloc.dart' hide ToggleFavoriteEvent;
 import '../../widgets/artwork_widget.dart';
 import '../../widgets/volume_fader.dart';
 
@@ -21,6 +24,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   late AnimationController _rotationController;
   bool _isSeeking = false;
   double _seekValue = 0.0;
+  bool _searchingArtwork = false;
+  int _artworkKey = 0;
 
   @override
   void initState() {
@@ -64,47 +69,58 @@ class _PlayerScreenState extends State<PlayerScreen>
           body: Container(
             decoration: const BoxDecoration(gradient: AppColors.playerGradient),
             child: SafeArea(
-              child: Column(
-                children: [
-                  _buildTopBar(context),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 8),
-                            _buildQualityBadge(state),
-                            const SizedBox(height: 16),
-                            _buildArtwork(state),
-                            const SizedBox(height: 28),
-                            _buildSongInfo(context, state),
-                            const SizedBox(height: 24),
-                            _buildWaveformProgress(state),
-                            const SizedBox(height: 8),
-                            _buildProgressBar(context, state),
-                            const SizedBox(height: 4),
-                            _buildTimeRow(state),
-                            const SizedBox(height: 32),
-                            _buildControls(context, state),
-                            const SizedBox(height: 20),
-                            VolumeFader(
-                              volume: state.volume,
-                              isMuted: state.isMuted,
-                              width: 200,
-                              onVolumeChange: (v) => context.read<PlayerBloc>().add(SetVolumeEvent(v)),
-                              onToggleMute: () => context.read<PlayerBloc>().add(const ToggleMuteEvent()),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final screenHeight = MediaQuery.of(context).size.height;
+                  final isCompact = screenHeight < 700;
+                  final horizontalPadding = screenWidth < 360 ? 16.0 : 24.0;
+                  final artworkSize = (screenWidth - horizontalPadding * 2)
+                      .clamp(180.0, isCompact ? 260.0 : 340.0);
+
+                  return Column(
+                    children: [
+                      _buildTopBar(context, state),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                            child: Column(
+                              children: [
+                                SizedBox(height: isCompact ? 4 : 8),
+                                _buildQualityBadge(state),
+                                SizedBox(height: isCompact ? 10 : 16),
+                                _buildArtwork(state, artworkSize),
+                                SizedBox(height: isCompact ? 16 : 28),
+                                _buildSongInfo(context, state),
+                                SizedBox(height: isCompact ? 16 : 24),
+                                _buildWaveformProgress(state, horizontalPadding),
+                                const SizedBox(height: 8),
+                                _buildProgressBar(context, state),
+                                const SizedBox(height: 4),
+                                _buildTimeRow(state),
+                                SizedBox(height: isCompact ? 20 : 32),
+                                _buildControls(context, state, isCompact: isCompact),
+                                SizedBox(height: isCompact ? 12 : 20),
+                                VolumeFader(
+                                  volume: state.volume,
+                                  isMuted: state.isMuted,
+                                  width: screenWidth - horizontalPadding * 2 - 32,
+                                  onVolumeChange: (v) =>
+                                      context.read<PlayerBloc>().add(SetVolumeEvent(v)),
+                                  onToggleMute: () =>
+                                      context.read<PlayerBloc>().add(const ToggleMuteEvent()),
+                                ),
+                                SizedBox(height: isCompact ? 16 : 24),
+                              ],
                             ),
-                            const SizedBox(height: 24),
-                            _buildBottomActions(context, state),
-                            const SizedBox(height: 24),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -113,32 +129,121 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(BuildContext context, PlayerBlocState state) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
             color: AppColors.textSecondary,
             onPressed: () => Navigator.of(context).pop(),
           ),
-          Text(
-            AppConstants.appName,
-            style: AppTextStyles.titleLarge.copyWith(
-              color: AppColors.neonRed,
-              letterSpacing: 3,
+          Expanded(
+            child: Text(
+              AppConstants.appName,
+              style: AppTextStyles.titleLarge.copyWith(
+                color: AppColors.neonRed,
+                letterSpacing: 3,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert_rounded),
-            color: AppColors.textSecondary,
-            onPressed: () => _showSongOptions(context),
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: _searchingArtwork
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.more_vert_rounded),
+                    color: AppColors.textSecondary,
+                    onPressed: () => _showArtworkMenu(context, state),
+                  ),
           ),
         ],
       ),
     );
+  }
+
+  void _showArtworkMenu(BuildContext context, PlayerBlocState state) {
+    final song = state.currentSong;
+    if (song == null) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surfaceModal,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.image_search_rounded, color: AppColors.neonRed),
+                title: const Text('Buscar imagen de carátula'),
+                subtitle: Text(
+                  song.title,
+                  style: AppTextStyles.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _searchArtwork(context, song);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _searchArtwork(BuildContext context, SongModel song) async {
+    setState(() => _searchingArtwork = true);
+    try {
+      final art = await ArtworkCache.searchRemoteArtwork(song);
+      if (!mounted) return;
+
+      final messenger = ScaffoldMessenger.of(context);
+      if (art != null) {
+        setState(() => _artworkKey++);
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Carátula encontrada y aplicada'),
+            backgroundColor: AppColors.surfaceElevated,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('No se encontró carátula. Verificá conexión a internet.'),
+            backgroundColor: AppColors.surfaceElevated,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _searchingArtwork = false);
+    }
   }
 
   Widget _buildQualityBadge(PlayerBlocState state) {
@@ -166,11 +271,11 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _buildArtwork(PlayerBlocState state) {
-    final size = MediaQuery.of(context).size.width - 48;
+  Widget _buildArtwork(PlayerBlocState state, double size) {
     return Hero(
       tag: 'artwork-${state.currentSong!.id}',
       child: LargeArtworkWidget(
+        key: ValueKey('player-art-${state.currentSong!.id}-$_artworkKey'),
         song: state.currentSong!,
         size: size,
       ).animate(target: state.isPlaying ? 1.0 : 0.95).scale(
@@ -184,49 +289,61 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Widget _buildSongInfo(BuildContext context, PlayerBlocState state) {
     final song = state.currentSong!;
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                song.title,
-                style: AppTextStyles.displayMedium.copyWith(fontSize: 22),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+    return BlocBuilder<LibraryBloc, LibraryBlocState>(
+      buildWhen: (prev, curr) => prev.favorites != curr.favorites,
+      builder: (context, libraryState) {
+        final isFavorite = libraryState.isFavorite(song.id);
+        return Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    song.title,
+                    style: AppTextStyles.displayMedium.copyWith(fontSize: 22),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    song.artist,
+                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.neonRed),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                song.artist,
-                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.neonRed),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        GestureDetector(
-          onTap: () => context.read<PlayerBloc>().add(ToggleFavoriteEvent(song.id)),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: Icon(
-              Icons.favorite_border_rounded,
-              color: AppColors.textMuted,
-              size: 26,
             ),
-          ),
-        ),
-      ],
+            Semantics(
+              button: true,
+              label: isFavorite ? 'Quitar de me gusta' : 'Agregar a me gusta',
+              child: GestureDetector(
+                onTap: () => context.read<LibraryBloc>().add(ToggleFavoriteEvent(song.id)),
+                child: AnimatedContainer(
+                  duration: AppConstants.animFast,
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: isFavorite ? AppColors.neonRed : AppColors.textMuted,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildWaveformProgress(PlayerBlocState state) {
+  Widget _buildWaveformProgress(PlayerBlocState state, double horizontalPadding) {
+    final width = MediaQuery.of(context).size.width - horizontalPadding * 2;
     return SizedBox(
       height: 40,
       child: CustomPaint(
         painter: _WaveformPainter(progress: state.progress),
-        size: Size(MediaQuery.of(context).size.width - 48, 40),
+        size: Size(width, 40),
       ),
     );
   }
@@ -274,31 +391,28 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _buildControls(BuildContext context, PlayerBlocState state) {
+  Widget _buildControls(BuildContext context, PlayerBlocState state, {bool isCompact = false}) {
+    final mainSize = isCompact ? 64.0 : 72.0;
+    final sideSize = isCompact ? 38.0 : 42.0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // Shuffle
         _ModeButton(
           icon: Icons.shuffle_rounded,
           isActive: state.shuffleEnabled,
           onTap: () => context.read<PlayerBloc>().add(const ToggleShuffleEvent()),
         ),
-
-        // Previous
         _ControlButton(
           icon: Icons.skip_previous_rounded,
-          size: 42,
+          size: sideSize,
           onTap: () => context.read<PlayerBloc>().add(const SkipPreviousEvent()),
         ),
-
-        // Play/Pause — main button
         GestureDetector(
           onTap: () => context.read<PlayerBloc>().add(const TogglePlayPauseEvent()),
           child: AnimatedContainer(
             duration: AppConstants.animFast,
-            width: 72,
-            height: 72,
+            width: mainSize,
+            height: mainSize,
             decoration: BoxDecoration(
               color: AppColors.neonRed,
               shape: BoxShape.circle,
@@ -313,48 +427,16 @@ class _PlayerScreenState extends State<PlayerScreen>
             child: Icon(
               state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: Colors.white,
-              size: 38,
+              size: mainSize * 0.52,
             ),
           ),
         ),
-
-        // Next
         _ControlButton(
           icon: Icons.skip_next_rounded,
-          size: 42,
+          size: sideSize,
           onTap: () => context.read<PlayerBloc>().add(const SkipNextEvent()),
         ),
-
-        // Repeat
         _RepeatButton(mode: state.repeatMode),
-      ],
-    );
-  }
-
-  Widget _buildBottomActions(BuildContext context, PlayerBlocState state) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _ActionButton(
-          icon: Icons.favorite_border_rounded,
-          label: 'LIKE',
-          onTap: () {},
-        ),
-        _ActionButton(
-          icon: Icons.lyrics_outlined,
-          label: 'LYRICS',
-          onTap: () {},
-        ),
-        _ActionButton(
-          icon: Icons.queue_music_rounded,
-          label: 'QUEUE',
-          onTap: () => _showQueue(context, state),
-        ),
-        _ActionButton(
-          icon: Icons.output_rounded,
-          label: 'OUTPUT',
-          onTap: () {},
-        ),
       ],
     );
   }
@@ -414,7 +496,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(context),
+            _buildTopBar(context, state),
             Expanded(
               child: Center(
                 child: Column(
@@ -495,110 +577,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       ),
     );
   }
-
-  void _showSongOptions(BuildContext context) {
-    final state = context.read<PlayerBloc>().state;
-    final song = state.currentSong;
-    if (song == null) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surfaceModal,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.album_rounded, color: AppColors.textSecondary),
-              title: Text(song.album, style: AppTextStyles.bodyLarge),
-              subtitle: Text(song.artist, style: AppTextStyles.bodyMedium),
-            ),
-            const Divider(color: AppColors.divider),
-            _OptionTile(icon: Icons.playlist_add_rounded, label: 'Add to playlist'),
-            _OptionTile(icon: Icons.info_outline_rounded, label: 'Song info'),
-            _OptionTile(icon: Icons.equalizer_rounded, label: 'Equalizer'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showQueue(BuildContext context, PlayerBlocState state) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surfaceModal,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        builder: (_, controller) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: Column(
-            children: [
-              Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text('Queue', style: AppTextStyles.headlineMedium),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ListView.builder(
-                  controller: controller,
-                  itemCount: state.queue.length,
-                  itemBuilder: (context, index) {
-                    final song = state.queue[index];
-                    final isCurrent = index == state.currentIndex;
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Text(
-                        '${index + 1}',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: isCurrent ? AppColors.neonRed : AppColors.textMuted,
-                        ),
-                      ),
-                      title: Text(
-                        song.title,
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: isCurrent ? AppColors.neonRed : AppColors.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(song.artist, style: AppTextStyles.bodyMedium),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
-
-// ── Reusable Controls ──────────────────────────────────────────────────────────
 
 class _ControlButton extends StatelessWidget {
   final IconData icon;
@@ -678,45 +657,6 @@ class _RepeatButton extends StatelessWidget {
         color: mode != RepeatMode.none ? AppColors.neonRed : AppColors.textMuted,
         size: 24,
       ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppColors.textSecondary, size: 22),
-          const SizedBox(height: 4),
-          Text(label, style: AppTextStyles.labelSmall),
-        ],
-      ),
-    );
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _OptionTile({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary),
-      title: Text(label, style: AppTextStyles.bodyLarge),
-      onTap: () => Navigator.pop(context),
     );
   }
 }

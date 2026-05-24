@@ -204,6 +204,30 @@ class DatabaseHelper {
     return maps.map(SongModel.fromMap).toList();
   }
 
+  Future<bool> isFavorite(int songId) async {
+    final db = await database;
+    final maps = await db.query(
+      'songs',
+      columns: ['is_favorite'],
+      where: 'id = ?',
+      whereArgs: [songId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return false;
+    return (maps.first['is_favorite'] as int? ?? 0) == 1;
+  }
+
+  Future<List<SongModel>> getMostPlayed({int limit = 4}) async {
+    final db = await database;
+    final maps = await db.query(
+      'songs',
+      where: 'play_count > 0',
+      orderBy: 'play_count DESC, last_played DESC',
+      limit: limit,
+    );
+    return maps.map(SongModel.fromMap).toList();
+  }
+
   Future<List<SongModel>> getRecentlyPlayed({int limit = 20}) async {
     final db = await database;
     final maps = await db.rawQuery('''

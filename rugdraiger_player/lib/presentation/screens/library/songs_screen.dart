@@ -89,7 +89,12 @@ class _SongsScreenState extends State<SongsScreen> {
                               duration: DurationFormatter.formatMs(song.durationMs),
                               qualityBadge: song.format.name.toUpperCase(),
                               isPlaying: isPlaying,
-                              leading: ArtworkWidget(song: song, size: 46, borderRadius: 6),
+                              leading: ArtworkWidget(
+                                key: ValueKey('artwork-${song.id}'),
+                                song: song,
+                                size: 46,
+                                borderRadius: 6,
+                              ),
                               onTap: () {
                                 context.read<PlayerBloc>().add(
                                   PlaySongEvent(song, queue: filtered, index: index),
