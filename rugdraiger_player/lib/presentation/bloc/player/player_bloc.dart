@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/music_repository.dart';
 import '../../../services/audio_service.dart';
+import '../../../services/widget_bridge.dart';
 import 'player_event.dart';
 import 'player_state.dart' as bloc_state;
 
@@ -166,6 +167,8 @@ class PlayerBloc extends Bloc<PlayerEvent, bloc_state.PlayerBlocState> {
       currentIndex: ps.currentIndex,
       errorMessage: ps.errorMessage,
     ));
+
+    WidgetBridge.sync(ps);
   }
 
   Future<void> _onToggleFavorite(ToggleFavoriteEvent event, Emitter emit) async {

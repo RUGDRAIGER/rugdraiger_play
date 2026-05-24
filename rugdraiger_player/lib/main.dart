@@ -49,8 +49,8 @@ Future<void> _initPlatformServices() async {
       androidNotificationChannelName: 'Rugdraiger Play',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
-      androidNotificationIcon: 'mipmap/ic_launcher',
-      preloadArtwork: false,
+      androidNotificationIcon: 'drawable/ic_stat_music_note',
+      preloadArtwork: true,
     );
     AudioPlayerService.backgroundEnabled = true;
   } catch (e, st) {

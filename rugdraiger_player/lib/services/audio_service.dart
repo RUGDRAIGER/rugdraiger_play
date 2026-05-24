@@ -5,6 +5,8 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:rxdart/rxdart.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/song_model.dart';
+import 'artwork_media_uri.dart';
+import 'widget_bridge.dart';
 
 class PlayerState {
   final SongModel? currentSong;
@@ -175,15 +177,45 @@ class AudioPlayerService {
     return uris.toList();
   }
 
+  Future<MediaItem> _mediaItemFor(SongModel song) async {
+    final meta = ArtworkMediaUri.displayMeta(song);
+    final artUri = await ArtworkMediaUri.resolve(song);
+    return MediaItem(
+      id: song.id.toString(),
+      title: meta.title,
+      artist: meta.artist,
+      album: meta.album,
+      displayTitle: meta.title,
+      displaySubtitle: meta.artist,
+      displayDescription: meta.album,
+      duration: song.durationMs > 0
+          ? Duration(milliseconds: song.durationMs)
+          : null,
+      artUri: artUri,
+    );
+  }
+
+  Future<AudioSource> _sourceForSong(SongModel song, {required bool withBackgroundTag}) async {
+    final uri = _urisForSong(song).first;
+    if (withBackgroundTag) {
+      final tag = await _mediaItemFor(song);
+      return AudioSource.uri(uri, tag: tag);
+    }
+    return AudioSource.uri(uri);
+  }
+
   AudioSource _sourceForUri(Uri uri, SongModel song, {required bool withBackgroundTag}) {
     if (withBackgroundTag) {
+      final meta = ArtworkMediaUri.displayMeta(song);
       return AudioSource.uri(
         uri,
         tag: MediaItem(
           id: song.id.toString(),
-          title: song.title,
-          artist: song.artist,
-          album: song.album,
+          title: meta.title,
+          artist: meta.artist,
+          album: meta.album,
+          displayTitle: meta.title,
+          displaySubtitle: meta.artist,
           duration: song.durationMs > 0
               ? Duration(milliseconds: song.durationMs)
               : null,
@@ -206,10 +238,10 @@ class AudioPlayerService {
     // Intento 1: playlist completa con tags (background)
     if (backgroundEnabled) {
       try {
-        final sources = playQueue.map((s) {
-          final songUris = _urisForSong(s);
-          return _sourceForUri(songUris.first, s, withBackgroundTag: true);
-        }).toList();
+        final sources = <AudioSource>[];
+        for (final s in playQueue) {
+          sources.add(await _sourceForSong(s, withBackgroundTag: true));
+        }
         await player.setAudioSource(
           ConcatenatingAudioSource(children: sources),
           initialIndex: safeIndex,
@@ -391,7 +423,9 @@ class AudioPlayerService {
   }
 
   void _updateState(PlayerState Function(PlayerState) updater) {
-    _stateController.add(updater(_stateController.value));
+    final next = updater(_stateController.value);
+    _stateController.add(next);
+    WidgetBridge.sync(next);
   }
 
   Future<void> dispose() async {

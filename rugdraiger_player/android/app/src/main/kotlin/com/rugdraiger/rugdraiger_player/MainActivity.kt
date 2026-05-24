@@ -1,6 +1,7 @@
 package com.rugdraiger.rugdraiger_player
 
 import android.net.Uri
+import androidx.core.content.FileProvider
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -36,6 +37,61 @@ class MainActivity : AudioServiceActivity() {
                             }
                         }
                     }.start()
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "rugdraiger/widget",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getArtworkContentUri" -> {
+                    val path = call.argument<String>("path")
+                    if (path.isNullOrBlank()) {
+                        result.error("INVALID_PATH", "Path is empty", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val file = File(path)
+                        if (!file.exists()) {
+                            result.success(null)
+                            return@setMethodCallHandler
+                        }
+                        val uri = FileProvider.getUriForFile(
+                            this,
+                            "${applicationContext.packageName}.fileprovider",
+                            file,
+                        )
+                        grantUriPermission(
+                            applicationContext.packageName,
+                            uri,
+                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                        )
+                        result.success(uri.toString())
+                    } catch (e: Exception) {
+                        result.error("URI_ERROR", e.message, null)
+                    }
+                }
+
+                "updateWidget" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val args = call.arguments as? Map<String, Any?>
+                    if (args == null) {
+                        result.error("INVALID_ARGS", "Missing widget args", null)
+                        return@setMethodCallHandler
+                    }
+                    WidgetHelper.saveState(this, args)
+                    PlayerWidgetProvider.updateAll(this)
+                    result.success(null)
+                }
+
+                "clearWidget" -> {
+                    WidgetHelper.clearState(this)
+                    PlayerWidgetProvider.updateAll(this)
+                    result.success(null)
                 }
 
                 else -> result.notImplemented()
