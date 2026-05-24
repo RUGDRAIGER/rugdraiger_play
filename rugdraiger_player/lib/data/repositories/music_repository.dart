@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:on_audio_query/on_audio_query.dart' as oaq;
 import 'package:path/path.dart' as path_lib;
 import '../../core/constants/app_constants.dart';
+import '../../core/platform/desktop_music_paths.dart';
+import '../../core/platform/platform_config.dart';
 import '../../services/filename_metadata.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
@@ -20,6 +22,10 @@ class MusicRepository {
   // ── Scanning ───────────────────────────────────────────────────────────────
 
   Future<int> scanAndIndexLibrary() async {
+    if (PlatformConfig.isDesktop) {
+      return scanDesktopLibrary();
+    }
+
     final permitted = await _audioQuery.checkAndRequest(retryRequest: true);
     if (!permitted) {
       throw Exception(
@@ -48,6 +54,18 @@ class MusicRepository {
     } catch (e) {
       throw Exception('Error al escanear biblioteca: $e');
     }
+  }
+
+  /// Escanea carpetas de música típicas en Windows/macOS/Linux.
+  Future<int> scanDesktopLibrary() async {
+    final folders = DesktopMusicPaths.defaultMusicFolders();
+    if (folders.isEmpty) return 0;
+
+    var total = 0;
+    for (final folder in folders) {
+      total += await scanDirectory(folder);
+    }
+    return total;
   }
 
   SongModel _fromOaqSong(oaq.SongModel song) {
@@ -222,6 +240,14 @@ class MusicRepository {
   /// Las rutas guardadas en SQLite pueden quedar obsoletas; MediaStore siempre
   /// devuelve el URI content:// válido en Android moderno.
   Future<SongModel> resolveForPlayback(SongModel song) async {
+    if (PlatformConfig.isDesktop) {
+      final path = song.filePath.trim().replaceFirst('file://', '');
+      if (path.isNotEmpty && File(path).existsSync()) {
+        return song;
+      }
+      return song;
+    }
+
     final path = await _resolvePlayablePath(song);
     if (path == song.filePath) return song;
     return song.copyWith(filePath: path);

@@ -1,0 +1,23 @@
+RUGDRAIGER PLAY — VERSIÓN ESCRITORIO WINDOWS
+==============================================
+
+Esta carpeta contiene los scripts para generar el programa de Windows (.exe)
+a partir del mismo código Flutter de la APK.
+
+CÓMO GENERAR EL .EXE (en un PC con Windows):
+1. Instala Flutter y Visual Studio 2022 (C++ desktop).
+2. Doble clic en build-windows.bat
+   O en PowerShell: .\build-windows.ps1
+3. El programa quedará en: exe\RugdraigerPlay\RugdraigerPlay.exe
+
+IMPORTANTE:
+- Desde macOS NO se puede crear el .exe; hace falta Windows.
+- La versión de escritorio ya fue probada en macOS con la misma interfaz.
+- No subir a GitHub hasta que el usuario lo confirme.
+
+MISMAS FUNCIONES QUE LA APK:
+- Reproducción local (MP3, FLAC, WAV, etc.)
+- Biblioteca, playlists, favoritos
+- Carátulas embebidas y búsqueda iTunes
+- Ecualizador
+- Diseño negro + rojo Rugdraiger

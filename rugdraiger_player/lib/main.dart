@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'core/platform/database_init.dart';
+import 'core/platform/platform_config.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'core/constants/app_constants.dart';
@@ -19,17 +21,21 @@ import 'presentation/screens/home/main_scaffold.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  await initDesktopDatabase();
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppColors.surfaceElevated,
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
+  if (!PlatformConfig.isDesktop) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: AppColors.surfaceElevated,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
+  }
 
   await _initPlatformServices();
   runApp(const RugdraigerApp());
@@ -43,20 +49,24 @@ Future<void> _initPlatformServices() async {
     debugPrint('AudioSession init failed: $e\n$st');
   }
 
-  try {
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.rugdraiger.player.channel.audio',
-      androidNotificationChannelName: 'Rugdraiger Play',
-      androidNotificationOngoing: true,
-      androidStopForegroundOnPause: true,
-      androidNotificationIcon: 'drawable/ic_stat_music_note',
-      notificationColor: AppColors.accent,
-      preloadArtwork: true,
-    );
-    AudioPlayerService.backgroundEnabled = true;
-  } catch (e, st) {
+  if (!PlatformConfig.isDesktop) {
+    try {
+      await JustAudioBackground.init(
+        androidNotificationChannelId: 'com.rugdraiger.player.channel.audio',
+        androidNotificationChannelName: 'Rugdraiger Play',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: true,
+        androidNotificationIcon: 'drawable/ic_stat_music_note',
+        notificationColor: AppColors.accent,
+        preloadArtwork: true,
+      );
+      AudioPlayerService.backgroundEnabled = true;
+    } catch (e, st) {
+      AudioPlayerService.backgroundEnabled = false;
+      debugPrint('JustAudioBackground init failed (playback sin notificación): $e\n$st');
+    }
+  } else {
     AudioPlayerService.backgroundEnabled = false;
-    debugPrint('JustAudioBackground init failed (playback sin notificación): $e\n$st');
   }
 
   try {
@@ -106,7 +116,12 @@ class _AppBootstrap extends StatelessWidget {
   const _AppBootstrap();
 
   @override
-  Widget build(BuildContext context) => const _PermissionGate();
+  Widget build(BuildContext context) {
+    if (PlatformConfig.isDesktop) {
+      return const MainScaffold(autoScanOnStart: true);
+    }
+    return const _PermissionGate();
+  }
 }
 
 class _PermissionGate extends StatefulWidget {
@@ -140,7 +155,6 @@ class _PermissionGateState extends State<_PermissionGate> {
       return;
     }
 
-    // Primera apertura: pedir permiso de inmediato
     await _requestAccess();
   }
 

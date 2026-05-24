@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/navigation/view_name.dart';
+import '../../../core/platform/platform_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../bloc/library/library_bloc.dart';
 import '../../bloc/player/player_bloc.dart';
@@ -89,8 +90,25 @@ class _MainScaffoldState extends State<MainScaffold> {
       child: BlocListener<LibraryBloc, LibraryBlocState>(
         listener: (context, state) => _maybeAutoScan(state),
         child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Stack(
+          backgroundColor: AppColors.background,
+          body: PlatformConfig.isDesktop
+              ? Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520, maxHeight: 960),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: _buildShell(),
+                    ),
+                  ),
+                )
+              : _buildShell(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShell() {
+    return Stack(
           children: [
             Column(
               children: [
@@ -118,9 +136,6 @@ class _MainScaffoldState extends State<MainScaffold> {
               onClose: () => setState(() => _drawerOpen = false),
             ),
           ],
-        ),
-        ),
-      ),
-    );
+        );
   }
 }

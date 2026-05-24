@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:on_audio_query/on_audio_query.dart' as oaq;
+import '../core/platform/platform_config.dart';
 import '../data/models/song_model.dart';
 import 'artwork_fetcher.dart';
 import 'artwork_refresh.dart';
@@ -143,8 +144,9 @@ class ArtworkCache {
       return remote;
     }
 
-    // 3) MediaStore solo si hay metadata real de álbum/artista (no carpeta "Music")
-    if (canShareArtworkByAlbum(meta.artist, meta.album)) {
+    // 3) MediaStore solo en Android/iOS
+    if (!PlatformConfig.isDesktop &&
+        canShareArtworkByAlbum(meta.artist, meta.album)) {
       try {
         final mediaId = await _resolveMediaStoreId(song);
         if (mediaId != null) {
@@ -252,11 +254,7 @@ class ArtworkCache {
     add(filePath);
 
     final normalized = filePath.replaceFirst('file://', '');
-    if (normalized.startsWith('/') && !normalized.startsWith('content://')) {
-      return paths;
-    }
-
-    if (!filePath.startsWith('content://')) {
+    if (PlatformConfig.isDesktop || !filePath.startsWith('content://')) {
       return paths;
     }
 
