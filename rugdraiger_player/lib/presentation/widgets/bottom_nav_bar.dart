@@ -16,10 +16,9 @@ class BottomNavBar extends StatelessWidget {
 
   static const _items = [
     (ViewName.home, 'Inicio', Icons.home_rounded),
-    (ViewName.songs, 'Canciones', Icons.music_note_rounded),
     (ViewName.playlists, 'Playlists', Icons.queue_music_rounded),
-    (ViewName.equalizer, 'Ecualizador', Icons.graphic_eq_rounded),
     (ViewName.search, 'Buscar', Icons.search_rounded),
+    (ViewName.equalizer, 'Ecualizador', Icons.graphic_eq_rounded),
   ];
 
   @override

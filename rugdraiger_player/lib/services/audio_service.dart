@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
@@ -130,12 +132,21 @@ class AudioPlayerService {
 
     player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
-        _handleCompletion();
+        unawaited(_handleCompletion());
       }
     });
 
     player.currentIndexStream.listen((index) {
       if (index != null) {
+        final prev = currentState;
+        if (prev.repeatMode == RepeatMode.none &&
+            prev.queue.isNotEmpty &&
+            prev.currentIndex >= prev.queue.length - 1 &&
+            index == 0 &&
+            prev.queue.length > 1) {
+          unawaited(_stopAtQueueEnd());
+          return;
+        }
         _updateState((s) {
           if (index < s.queue.length) {
             return s.copyWith(
@@ -147,6 +158,25 @@ class AudioPlayerService {
         });
       }
     });
+  }
+
+  Future<void> _stopAtQueueEnd() async {
+    final state = currentState;
+    if (state.queue.isEmpty) return;
+    final lastIndex = state.queue.length - 1;
+    await _activePlayer.pause();
+    await _activePlayer.seek(Duration.zero, index: lastIndex);
+    final dur = _activePlayer.duration ?? state.duration;
+    if (dur.inMilliseconds > 0) {
+      await _activePlayer.seek(dur, index: lastIndex);
+    }
+    _updateState((s) => s.copyWith(
+      isPlaying: false,
+      currentIndex: lastIndex,
+      currentSong: s.queue[lastIndex],
+      position: dur.inMilliseconds > 0 ? dur : s.position,
+      duration: dur.inMilliseconds > 0 ? dur : s.duration,
+    ));
   }
 
   Future<void> _ensureSessionActive() async {
@@ -300,6 +330,8 @@ class AudioPlayerService {
 
     await _setSourceWithFallback(player, song, playQueue, safeIndex);
 
+    await setRepeatMode(currentState.repeatMode);
+
     final vol = currentState.effectiveVolume;
     await player.setVolume(vol);
 
@@ -348,7 +380,17 @@ class AudioPlayerService {
   Future<void> skipToNext() async {
     final state = currentState;
     if (state.queue.isEmpty) return;
-    final nextIndex = (state.currentIndex + 1) % state.queue.length;
+
+    if (state.repeatMode == RepeatMode.none && state.currentIndex >= state.queue.length - 1) {
+      return;
+    }
+
+    final nextIndex = state.repeatMode == RepeatMode.all
+        ? (state.currentIndex + 1) % state.queue.length
+        : state.currentIndex + 1;
+
+    if (nextIndex >= state.queue.length) return;
+
     await _activePlayer.seek(Duration.zero, index: nextIndex);
     if (!_activePlayer.playing) await play();
   }
@@ -360,7 +402,17 @@ class AudioPlayerService {
       await _activePlayer.seek(Duration.zero);
       return;
     }
-    final prevIndex = (state.currentIndex - 1 + state.queue.length) % state.queue.length;
+    if (state.repeatMode == RepeatMode.none && state.currentIndex <= 0) {
+      await _activePlayer.seek(Duration.zero);
+      return;
+    }
+    final prevIndex = state.repeatMode == RepeatMode.all
+        ? (state.currentIndex - 1 + state.queue.length) % state.queue.length
+        : state.currentIndex - 1;
+    if (prevIndex < 0) {
+      await _activePlayer.seek(Duration.zero);
+      return;
+    }
     await _activePlayer.seek(Duration.zero, index: prevIndex);
     if (!_activePlayer.playing) await play();
   }
@@ -414,11 +466,14 @@ class AudioPlayerService {
     _updateState((s) => s.copyWith(isMuted: muted));
   }
 
-  void _handleCompletion() {
+  Future<void> _handleCompletion() async {
     final state = currentState;
-    if (state.repeatMode == RepeatMode.none &&
-        state.currentIndex >= state.queue.length - 1) {
-      _updateState((s) => s.copyWith(isPlaying: false));
+    if (state.repeatMode == RepeatMode.one || state.repeatMode == RepeatMode.all) {
+      return;
+    }
+    if (state.queue.isEmpty) return;
+    if (state.currentIndex >= state.queue.length - 1) {
+      await _stopAtQueueEnd();
     }
   }
 

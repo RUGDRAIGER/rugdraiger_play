@@ -141,9 +141,10 @@ class DatabaseHelper {
     final likeQuery = '%$query%';
     final maps = await db.query(
       'songs',
-      where: 'title LIKE ? OR artist LIKE ? OR album LIKE ?',
-      whereArgs: [likeQuery, likeQuery, likeQuery],
-      limit: 50,
+      where: '''title LIKE ? OR artist LIKE ? OR album LIKE ? OR genre LIKE ?
+        OR CAST(year AS TEXT) LIKE ? OR format LIKE ?''',
+      whereArgs: [likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery],
+      limit: 80,
     );
     return maps.map(SongModel.fromMap).toList();
   }
@@ -226,6 +227,50 @@ class DatabaseHelper {
       limit: limit,
     );
     return maps.map(SongModel.fromMap).toList();
+  }
+
+  Future<List<SongModel>> getMostPlayedThisMonth({int limit = 4}) async {
+    final db = await database;
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1).millisecondsSinceEpoch;
+    final maps = await db.query(
+      'songs',
+      where: 'play_count > 0 AND last_played >= ?',
+      whereArgs: [startOfMonth],
+      orderBy: 'play_count DESC, last_played DESC',
+      limit: limit,
+    );
+    if (maps.isNotEmpty) {
+      return maps.map(SongModel.fromMap).toList();
+    }
+    return getMostPlayed(limit: limit);
+  }
+
+  Future<List<SongModel>> getRecentlyAdded({int limit = 8}) async {
+    final db = await database;
+    final maps = await db.query(
+      'songs',
+      orderBy: 'date_added DESC',
+      limit: limit,
+    );
+    return maps.map(SongModel.fromMap).toList();
+  }
+
+  Future<List<SongModel>> getSongsByGenre(String genre) async {
+    final db = await database;
+    final maps = await db.query(
+      'songs',
+      where: 'genre = ?',
+      whereArgs: [genre],
+      orderBy: 'album ASC, track_number ASC, title ASC',
+    );
+    return maps.map(SongModel.fromMap).toList();
+  }
+
+  Future<void> updateSongMetadata(int songId, Map<String, dynamic> fields) async {
+    if (fields.isEmpty) return;
+    final db = await database;
+    await db.update('songs', fields, where: 'id = ?', whereArgs: [songId]);
   }
 
   Future<List<SongModel>> getRecentlyPlayed({int limit = 20}) async {

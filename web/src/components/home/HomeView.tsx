@@ -8,8 +8,11 @@ import { SongActionsMenu } from '../ui/SongActionsMenu'
 import { openSongMenu, handleSongMenuOpenChange, type SongMenuState } from '../ui/songMenuUtils'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { AppIcon } from '../ui/AppIcon'
-import { APP_NAME, APK_DOWNLOAD_URL } from '../../constants/appBranding'
+import { FavoriteButton } from '../ui/FavoriteButton'
+import { HorizontalScroller, HorizontalSongCard } from '../ui/HorizontalScroller'
+import { APP_NAME } from '../../constants/appBranding'
 import { isNativeApp } from '../../utils/platform'
+import { DownloadAppButtons } from './DownloadAppButtons'
 import { formatDuration, supportsDirectoryPicker } from '../../services/scannerService'
 import type { ViewName } from '../../types'
 
@@ -17,22 +20,38 @@ interface Props {
   onNavigate: (v: ViewName) => void
 }
 
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buenos días'
+  if (h < 19) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
+const LIBRARY_LINKS: { id: ViewName; label: string; icon: string }[] = [
+  { id: 'artists', label: 'Artistas', icon: '🎤' },
+  { id: 'albums', label: 'Álbumes', icon: '💿' },
+  { id: 'genres', label: 'Géneros', icon: '🎵' },
+  { id: 'songs', label: 'Canciones', icon: '🎶' },
+]
+
 export function HomeView({ onNavigate }: Props) {
-  const { songs, albums, isScanning, scanProgress, error,
+  const store = useLibraryStore()
+  const {
+    songs, albums, isScanning, scanProgress, error,
     scanFromFiles, scanFromDirectory, getAlbumSongs,
-  } = useLibraryStore()
+    getFavorites, getMostPlayedThisMonth, getRecentlyPlayed, getRecentlyAdded,
+  } = store
   const { playSong } = usePlayerStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dirInputRef = useRef<HTMLInputElement>(null)
   const [menuState, setMenuState] = useState<SongMenuState | null>(null)
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0)
 
-  const recent = [...songs].sort((a, b) => b.dateAdded - a.dateAdded).slice(0, 10)
+  const favorites = getFavorites()
+  const mostPlayed = getMostPlayedThisMonth()
+  const recentlyPlayed = getRecentlyPlayed()
+  const recentlyAdded = getRecentlyAdded()
   const hasFsPicker = supportsDirectoryPicker()
-
-  const progressLabel = scanProgress?.phase === 'discovering'
-    ? `Explorando${scanProgress.foldersScanned ? ` · ${scanProgress.foldersScanned} carpetas` : ''}`
-    : 'Procesando'
 
   const progressPct = scanProgress
     ? scanProgress.phase === 'discovering'
@@ -41,294 +60,186 @@ export function HomeView({ onNavigate }: Props) {
     : 0
 
   return (
-    <div className="scrollable mobile-page" style={{ flex: 1, padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 32 }}>
-      <ConfirmDialog
-        open={clearStep === 1}
-        title="Limpiar biblioteca"
-        message={`¿Estás seguro de que quieres eliminar todas las ${songs.length} canciones de tu biblioteca?`}
-        confirmLabel="Continuar"
-        onConfirm={() => setClearStep(2)}
-        onCancel={() => setClearStep(0)}
-      />
-      <ConfirmDialog
-        open={clearStep === 2}
-        title="Confirmación final"
-        message="Esta acción borrará toda tu biblioteca de forma permanente y no se puede deshacer. ¿Deseas continuar?"
-        confirmLabel="Sí, limpiar todo"
-        onConfirm={async () => {
-          await useLibraryStore.getState().clearLibrary()
-          setClearStep(0)
-        }}
-        onCancel={() => setClearStep(0)}
-      />
+    <div className="scrollable mobile-page" style={{ flex: 1, padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <ConfirmDialog open={clearStep === 1} title="Limpiar biblioteca" message={`¿Eliminar las ${songs.length} canciones?`} confirmLabel="Continuar" onConfirm={() => setClearStep(2)} onCancel={() => setClearStep(0)} />
+      <ConfirmDialog open={clearStep === 2} title="Confirmación final" message="Esta acción no se puede deshacer." confirmLabel="Sí, limpiar todo" onConfirm={async () => { await useLibraryStore.getState().clearLibrary(); setClearStep(0) }} onCancel={() => setClearStep(0)} />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <AppIcon size={64} borderRadius={14} />
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.5, color: 'var(--accent)', marginBottom: 4 }}>
+      <header className="home-header">
+        <div className="home-header-brand">
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{getGreeting()}</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: 0.5, color: 'var(--accent)', lineHeight: 1.15 }}>
             {APP_NAME}
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
             {songs.length > 0 ? `${songs.length} canciones · ${albums.length} álbumes` : 'Tu biblioteca de música local'}
           </p>
         </div>
-      </div>
-
-      {/* Scan buttons */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        {hasFsPicker ? (
+        <div className="home-header-aside">
+          {!isNativeApp && <DownloadAppButtons />}
           <button
-            onClick={() => scanFromDirectory()}
-            disabled={isScanning}
-            style={{
-              padding: '12px 20px', borderRadius: 'var(--radius-md)',
-              background: 'var(--accent)', color: '#fff',
-              fontSize: 14, fontWeight: 600, cursor: isScanning ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 8,
-              opacity: isScanning ? 0.6 : 1,
-            }}
+            type="button"
+            onClick={() => onNavigate('search')}
+            aria-label="Buscar"
+            className="home-search-btn"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            Escanear disco o carpeta
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--text-secondary)"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
           </button>
-        ) : (
-          <button
-            onClick={() => dirInputRef.current?.click()}
-            disabled={isScanning}
-            style={{
-              padding: '12px 20px', borderRadius: 'var(--radius-md)',
-              background: 'var(--accent)', color: '#fff',
-              fontSize: 14, fontWeight: 600, cursor: isScanning ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 8,
-              opacity: isScanning ? 0.6 : 1,
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            Escanear carpeta
-          </button>
-        )}
+        </div>
+      </header>
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isScanning}
-          style={{
-            padding: '12px 20px', borderRadius: 'var(--radius-md)',
-            background: 'var(--bg-surface2)', color: 'var(--text-primary)',
-            fontSize: 14, fontWeight: 600, cursor: isScanning ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)',
-            opacity: isScanning ? 0.6 : 1,
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+      {/* Scan */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => hasFsPicker ? scanFromDirectory() : dirInputRef.current?.click()} disabled={isScanning}
+          style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: isScanning ? 0.6 : 1 }}>
+          Escanear música
+        </button>
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isScanning}
+          style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: 13, cursor: 'pointer' }}>
           Agregar archivos
         </button>
-
-        {hasFsPicker && (
-          <button
-            onClick={() => dirInputRef.current?.click()}
-            disabled={isScanning}
-            style={{
-              padding: '12px 20px', borderRadius: 'var(--radius-md)',
-              background: 'transparent', color: 'var(--text-secondary)',
-              fontSize: 14, cursor: isScanning ? 'not-allowed' : 'pointer',
-              border: '1px solid var(--border)',
-              opacity: isScanning ? 0.6 : 1,
-            }}
-          >
-            Carpeta (alternativo)
-          </button>
-        )}
-
         {songs.length > 0 && (
-          <button
-            onClick={() => setClearStep(1)}
-            style={{
-              padding: '12px 20px', borderRadius: 'var(--radius-md)',
-              background: 'transparent', color: 'var(--text-secondary)',
-              fontSize: 14, cursor: 'pointer', border: '1px solid var(--border)',
-            }}
-          >
-            Limpiar biblioteca
+          <button type="button" onClick={() => setClearStep(1)} style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            Limpiar
           </button>
         )}
       </div>
 
-      <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: -20, lineHeight: 1.5 }}>
-        Puedes seleccionar un disco completo (por ejemplo <strong>C:\</strong> en Windows o tu carpeta Música).
-        El navegador pedirá permiso de lectura; acéptalo para escanear todas las subcarpetas.
-      </p>
+      <input ref={fileInputRef} type="file" accept="audio/*,.lrc" multiple hidden onChange={(e) => { const f = Array.from(e.target.files ?? []); if (f.length) scanFromFiles(f); e.target.value = '' }} />
+      <input ref={dirInputRef} type="file" // @ts-expect-error webkitdirectory
+        webkitdirectory="" directory="" multiple hidden onChange={(e) => { const f = Array.from(e.target.files ?? []); if (f.length) scanFromFiles(f); e.target.value = '' }} />
 
-      {!isNativeApp && (
-        <a
-          href={APK_DOWNLOAD_URL}
-          download="rugdraiger-play.apk"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '10px 16px', borderRadius: 'var(--radius-md)',
-            background: 'var(--bg-surface)', border: '1px solid var(--border)',
-            color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
-            textDecoration: 'none', width: 'fit-content',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 18H7v-2h10v2zM19 9h-1V7c0-1.1-.9-2-2-2H8C6.9 5 6 5.9 6 7v2H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2zm-5 6h-2v2h-2v-2H8v-2h2v-2h2v2h2v2z"/></svg>
-          Descargar app Android nativa
-        </a>
-      )}
-
-      {/* Hidden inputs */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="audio/*"
-        multiple
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? [])
-          if (files.length) scanFromFiles(files)
-          e.target.value = ''
-        }}
-      />
-      <input
-        ref={dirInputRef}
-        type="file"
-        // @ts-expect-error webkitdirectory no está en todos los typings
-        webkitdirectory=""
-        directory=""
-        multiple
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? [])
-          if (files.length) scanFromFiles(files)
-          e.target.value = ''
-        }}
-      />
-
-      {/* Error */}
-      {error && !isScanning && (
-        <div style={{
-          padding: '12px 16px', borderRadius: 'var(--radius-md)',
-          background: 'rgba(255,32,32,0.1)', border: '1px solid rgba(255,32,32,0.3)',
-          color: 'var(--accent)', fontSize: 13,
-        }}>
-          {error}
-        </div>
-      )}
-
-      {/* Scan progress */}
+      {error && !isScanning && <div style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(255,32,32,0.1)', color: 'var(--accent)', fontSize: 13 }}>{error}</div>}
       {isScanning && (
-        <div style={{ padding: 16, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              {progressLabel}
-              {scanProgress?.phase === 'processing' && scanProgress.total > 0
-                ? ` · ${scanProgress.processed} / ${scanProgress.total}`
-                : scanProgress?.total
-                  ? ` · ${scanProgress.total} archivos encontrados`
-                  : ''}
-            </span>
-            {scanProgress?.phase === 'processing' && (
-              <span style={{ fontSize: 13, color: 'var(--accent)' }}>{progressPct}%</span>
-            )}
-          </div>
+        <div style={{ padding: 14, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
           <div style={{ height: 4, background: 'var(--bg-surface3)', borderRadius: 2 }}>
-            <div style={{
-              height: '100%', borderRadius: 2, background: 'var(--accent)',
-              width: `${progressPct}%`,
-              transition: 'width 0.2s',
-            }} />
+            <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.2s' }} />
           </div>
-          {scanProgress?.current && (
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {scanProgress.current}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Empty state */}
       {songs.length === 0 && !isScanning && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '60px 0' }}>
-          <AppIcon size={80} borderRadius={18} />
-          <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No hay música. Escanea un disco o carpeta para comenzar.</p>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '40px 0' }}>
+          <AppIcon size={72} borderRadius={16} />
+          <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>Escanea tu música para comenzar</p>
         </div>
       )}
 
-      {/* Recently added */}
-      {recent.length > 0 && (
-        <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Recientes</h2>
-            <button onClick={() => onNavigate('songs')} style={{ fontSize: 13, color: 'var(--accent)', cursor: 'pointer' }}>Ver todo</button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }} onClick={() => setMenuState(null)}>
-            {recent.map((song) => (
-              <div
-                key={song.id}
-                onClick={() => playSong(song, recent)}
-                onContextMenu={(e) => setMenuState(openSongMenu(e, song.id))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer', transition: 'background 0.15s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-surface)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-              >
-                <PlayableArtwork song={song} size={40} borderRadius={5} onPlay={() => playSong(song, recent)} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist} · {song.album}</div>
-                </div>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDuration(song.duration)}</span>
-                <SongActionsMenu
-                  song={song}
-                  open={menuState?.songId === song.id}
-                  anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
-                  onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
+      {/* Tu Actividad */}
+      {songs.length > 0 && (
+        <>
+          {favorites.length > 0 && (
+            <HorizontalScroller title="Favoritas" actionLabel="Ver todo" onAction={() => onNavigate('songs')}>
+              {favorites.slice(0, 12).map((song) => (
+                <HorizontalSongCard
+                  key={song.id}
+                  title={song.title}
+                  subtitle={song.artist}
+                  onClick={() => playSong(song, favorites)}
+                  artwork={<ArtworkDisplay song={song} size={120} borderRadius={12} style={{ width: '100%', height: '100%' }} />}
+                  badge={<div style={{ position: 'absolute', top: 6, right: 6 }}><FavoriteButton song={song} size={18} /></div>}
                 />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+              ))}
+            </HorizontalScroller>
+          )}
 
-      {/* Albums grid */}
-      {albums.length > 0 && (
-        <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>Álbumes</h2>
-            <button onClick={() => onNavigate('albums')} style={{ fontSize: 13, color: 'var(--accent)', cursor: 'pointer' }}>Ver todo</button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 16 }}>
-            {albums.slice(0, 12).map((album) => {
-              const albumSongs = getAlbumSongs(album.id)
-              return (
-              <div
-                key={album.id}
-                onClick={() => onNavigate('albums')}
-                style={{ cursor: 'pointer', transition: 'transform 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
-              >
-                <AlbumCoverArt
-                  artwork={album.artwork}
-                  title={album.title}
-                  artist={album.artist}
-                  album={album.title}
-                  size={130}
-                  borderRadius={10}
-                  menuSong={albumSongs[0] ?? null}
-                  style={{ width: '100%', height: 'auto', aspectRatio: '1' }}
+          {mostPlayed.length > 0 && (
+            <HorizontalScroller title="Lo más escuchado del mes">
+              {mostPlayed.map((song) => (
+                <HorizontalSongCard
+                  key={song.id}
+                  title={song.title}
+                  subtitle={`${song.playCount ?? 0} reproducciones`}
+                  onClick={() => playSong(song, mostPlayed)}
+                  artwork={<ArtworkDisplay song={song} size={120} borderRadius={12} style={{ width: '100%', height: '100%' }} />}
                 />
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.artist}</div>
-                </div>
+              ))}
+            </HorizontalScroller>
+          )}
+
+          {recentlyPlayed.length > 0 && (
+            <HorizontalScroller title="Recientes">
+              {recentlyPlayed.map((song) => (
+                <HorizontalSongCard
+                  key={song.id}
+                  title={song.title}
+                  subtitle={song.artist}
+                  onClick={() => playSong(song, recentlyPlayed)}
+                  artwork={<ArtworkDisplay song={song} size={120} borderRadius={12} style={{ width: '100%', height: '100%' }} />}
+                />
+              ))}
+            </HorizontalScroller>
+          )}
+
+          {/* Biblioteca */}
+          <section>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Biblioteca</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+              {LIBRARY_LINKS.map((link) => (
+                <button
+                  key={link.id}
+                  type="button"
+                  onClick={() => onNavigate(link.id)}
+                  style={{
+                    padding: '16px 14px', borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                    textAlign: 'left', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{link.icon}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{link.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {recentlyAdded.length > 0 && (
+            <section>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700 }}>Recién añadidas</h2>
+                <button type="button" onClick={() => onNavigate('songs')} style={{ fontSize: 13, color: 'var(--accent)', cursor: 'pointer' }}>Ver todo</button>
               </div>
-            )})}
-          </div>
-        </section>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }} onClick={() => setMenuState(null)}>
+                {recentlyAdded.slice(0, 8).map((song) => (
+                  <div key={song.id} onClick={() => playSong(song, recentlyAdded)} onContextMenu={(e) => setMenuState(openSongMenu(e, song.id))}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-surface)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
+                    <PlayableArtwork song={song} size={40} borderRadius={5} onPlay={() => playSong(song, recentlyAdded)} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{song.artist}</div>
+                    </div>
+                    <FavoriteButton song={song} size={18} />
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDuration(song.duration)}</span>
+                    <SongActionsMenu song={song} open={menuState?.songId === song.id} anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null} onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {albums.length > 0 && (
+            <section>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700 }}>Álbumes destacados</h2>
+                <button type="button" onClick={() => onNavigate('albums')} style={{ fontSize: 13, color: 'var(--accent)', cursor: 'pointer' }}>Ver todo</button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 14 }}>
+                {albums.slice(0, 8).map((album) => {
+                  const albumSongs = getAlbumSongs(album.id)
+                  return (
+                    <div key={album.id} onClick={() => onNavigate('albums')} style={{ cursor: 'pointer' }}>
+                      <AlbumCoverArt artwork={album.artwork} title={album.title} artist={album.artist} album={album.title} size={120} borderRadius={10} menuSong={albumSongs[0] ?? null} style={{ width: '100%', aspectRatio: '1' }} />
+                      <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.title}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   )

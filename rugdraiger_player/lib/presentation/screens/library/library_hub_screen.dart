@@ -17,6 +17,7 @@ class LibraryHubScreen extends StatelessWidget {
           ViewName.songs: state.songs.length,
           ViewName.albums: state.albums.length,
           ViewName.artists: state.artists.length,
+          ViewName.genres: state.genres.length,
           ViewName.playlists: state.playlists.length,
         };
 
@@ -38,7 +39,7 @@ class LibraryHubScreen extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
-              childAspectRatio: 0.95,
+              childAspectRatio: 0.88,
               children: [
                 _SectionCard(
                   label: 'Canciones',
@@ -60,6 +61,13 @@ class LibraryHubScreen extends StatelessWidget {
                   icon: Icons.person_rounded,
                   count: counts[ViewName.artists] ?? 0,
                   onTap: () => onNavigate(ViewName.artists),
+                ),
+                _SectionCard(
+                  label: 'Géneros',
+                  desc: 'Por género',
+                  icon: Icons.music_note_rounded,
+                  count: counts[ViewName.genres] ?? state.genres.length,
+                  onTap: () => onNavigate(ViewName.genres),
                 ),
                 _SectionCard(
                   label: 'Playlists',

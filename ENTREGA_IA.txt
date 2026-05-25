@@ -3,13 +3,28 @@ RUGDRAIGER PLAY — DOCUMENTO DE ENTREGA PARA OTRA IA
 ================================================================================
 Repositorio: https://github.com/RUGDRAIGER/rugdraiger_play
   Fecha referencia: mayo 2026
-  Última actualización documentada: 23 mayo 2026 — carátulas APK + deploy gh-pages
+  Última actualización documentada: 24 mayo 2026 — mejoras web PWA + deploy gh-pages
 
 Este archivo describe SOLO:
   A) La aplicación WEB (referencia de diseño y funcionalidad)
   B) La aplicación ANDROID NATIVA Flutter (última versión publicada)
 
 NO usar Capacitor/WebView como app principal. El APK publicado es Flutter nativo.
+
+--- REGLA DE TRABAJO (OBLIGATORIA PARA TODA MODIFICACIÓN) ---
+
+  Aplica siempre este ciclo antes de dar por terminado cualquier cambio:
+
+    1. Implementar la función o corrección solicitada
+    2. Probar en local (flutter test, flutter analyze, emulador/dispositivo si aplica)
+    3. Corregir errores detectados
+    4. Volver a probar hasta que todo funcione
+    5. Publicar en GitHub Pages solo cuando esté verificado:
+         APK → https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
+         Web → https://rugdraiger.github.io/rugdraiger_play/
+         Deploy: ./scripts/build-apk.sh (APK) + ./scripts/deploy-pwa.sh (sitio)
+
+  No subir cambios sin completar pruebas. Documentar cambios en este archivo.
 
 
 ================================================================================
@@ -24,12 +39,15 @@ A) PÁGINA WEB — Rugdraiger Play
   Build: cd web && npm run build:pages
   Deploy: scripts/deploy-pwa.sh → rama gh-pages
   APK descargable desde web: /rugdraiger_play/apk/rugdraiger-play.apk
+  Windows (ZIP ~157 MB, Git LFS en gh-pages):
+    https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/windows/RugdraigerPlay-Windows.zip
+  Último deploy gh-pages: 24 mayo 2026 (commit d60b369)
 
 --- Stack tecnológico ---
 
   React 18 + TypeScript + Vite 6
-  Estado: Zustand (4 stores)
-  Persistencia: Dexie (IndexedDB) — DB "RugdraigerPlayerDB" v3
+  Estado: Zustand (5 stores: library, player, eq, playlist, settings)
+  Persistencia: Dexie (IndexedDB) — DB "RugdraigerPlayerDB" v3+
   Metadatos audio: jsmediatags (ID3/APIC en cliente)
   Reproducción: HTMLAudioElement + Web Audio API (ecualizador real)
   PWA: vite-plugin-pwa (service worker, manifest)
@@ -59,55 +77,90 @@ A) PÁGINA WEB — Rugdraiger Play
   Móvil (<768px):   Contenido + MiniPlayer + BottomNav fijo + drawer "Más"
 
   Vistas (ViewName en web/src/types/index.ts):
-    home, library, songs, albums, artists, playlists, equalizer, search
-    (playlist-detail existe en tipos; lógica dentro de PlaylistsView)
+    home, library, songs, albums, artists, genres, playlists, equalizer,
+    search, settings (playlist-detail dentro de PlaylistsView)
 
-  Bottom nav móvil (5 tabs + Más):
-    Inicio | Canciones | Playlists | Ecualizador | Buscar | Más
-  Drawer "Más" incluye las 8 vistas completas + link Download APK (solo web)
+  Bottom nav móvil (5 accesos):
+    Inicio | Playlists | Buscar | Ecualizador | Más
+  Drawer "Más" incluye las 10 vistas + enlaces descarga Android/Windows (solo web)
+
+  Modo conducción: overlay DrivingModeView cuando settings.drivingMode = true
 
 --- Pantallas y archivos ---
 
   HomeView          web/src/components/home/HomeView.tsx
-    - Logo, stats (canciones/álbumes)
-    - Escanear disco/carpeta (File System Access API o input webkitdirectory)
-    - Agregar archivos sueltos
-    - Botón descargar APK Android
-    - Recientes, preview álbumes
+    - Saludo según hora + título Rugdraiger Play
+    - Botones descarga responsivos (DownloadAppButtons): Windows + Android
+    - Botón búsqueda global (→ search)
+    - Escanear disco/carpeta, agregar archivos, limpiar biblioteca
+    - Sección "Tu actividad" (scroll horizontal):
+        Favoritas | Lo más escuchado del mes | Recientes
+    - Sección "Biblioteca": accesos Artistas, Álbumes, Géneros, Canciones
+    - Recién añadidas + preview álbumes destacados
+
+  DownloadAppButtons  web/src/components/home/DownloadAppButtons.tsx
+    - Enlaces Escritorio Windows + Android móvil
+    - Layout columna en móvil, fila en tablet/desktop
+    - Oculto en app nativa (isNativeApp)
 
   LibraryView       web/src/components/library/LibraryView.tsx
-    - Hub con 4 tarjetas: Canciones, Álbumes, Artistas, Playlists
+    - Hub con 5 tarjetas: Canciones, Álbumes, Artistas, Géneros, Playlists
+
+  GenresView        web/src/components/library/GenresView.tsx
+    - Lista géneros derivados de metadatos + detalle con tracklist
 
   SongsView         web/src/components/library/SongsView.tsx
-    - Tabla: #, título, álbum, artista, formato, duración, menú ⋮
-    - Búsqueda, orden por columnas, Reproducir todo
-    - SongActionsMenu por fila
+    - Tabla con búsqueda, orden, Reproducir todo, FavoriteButton, menú ⋮
 
-  AlbumsView        web/src/components/library/AlbumsView.tsx
-    - Grid álbumes + búsqueda
-    - Detalle inline: carátula con menú ⋮, artista, "Reproducir álbum"
-    - Lista tracks abajo con PlayableArtwork + SongActionsMenu
-
-  ArtistsView       web/src/components/library/ArtistsView.tsx
-    - Lista artistas → detalle inline con tracklist
+  AlbumsView / ArtistsView — sin cambios estructurales; integran favoritos
 
   PlaylistsView     web/src/components/playlist/PlaylistsView.tsx
     - CRUD playlists, detalle con canciones, mosaic artwork
 
   EqualizerView     web/src/components/equalizer/EqualizerView.tsx
-    - 10 bandas verticales estilo fader rojo (±12 dB, step 0.5)
-    - Presets: Flat, Bass, Treble, Rock, Pop, Jazz, Classical, Electronic, Vocal
+    - 10 bandas verticales (±12 dB)
+    - Presets integrados + perfiles guardables por usuario (EQProfile)
     - Toggle activar/desactivar
 
   SearchView        web/src/components/search/SearchView.tsx
+    - Búsqueda indexada en tiempo real (searchService)
+    - Campos: título, artista, álbum, género, año, compositor, formato
     - Resultados agrupados: canciones, artistas, álbumes
+
+  SettingsView      web/src/components/settings/SettingsView.tsx
+    - Gapless playback, ReplayGain, colores dinámicos, modo conducción
+    - Teclas multimedia (Media Session), letras sincronizadas
+    - Acceso rápido al ecualizador; nube "próximamente"
 
   MiniPlayer        web/src/components/player/MiniPlayer.tsx
     - Barra progreso, artwork, título/artista, tiempo, prev/play/next
-    - VolumeFader horizontal (mute + slider rojo)
+    - SIN barra de volumen (volumen del sistema)
 
   FullPlayer        web/src/components/player/FullPlayer.tsx
-    - Overlay fullscreen, blur artwork, cola, repeat/shuffle, VolumeFader
+    - Overlay fullscreen, blur artwork, cola, repeat/shuffle
+    - FavoriteButton junto al título (rojo intenso #FF2020 cuando activo)
+    - Menú ⋮: "Buscar imagen de carátula" (iTunes)
+    - Gestos: swipe ←/→ cambiar pista, tap carátula pausa
+    - Letras .lrc / tags embebidos; acentos dinámicos desde carátula
+    - VolumeFader solo en reproductor completo
+
+  DrivingModeView   web/src/components/player/DrivingModeView.tsx
+    - UI minimalista: carátula grande, botones prev/play/next ampliados
+    - Activable desde Ajustes
+
+--- Componentes UI nuevos ---
+
+  FavoriteButton    web/src/components/ui/FavoriteButton.tsx
+    - Lee estado isFavorite desde libraryStore (no del prop stale)
+    - Corazón relleno rojo #FF2020 + glow al marcar favorito
+    - Usado en HomeView, FullPlayer, SearchView, listas
+
+  HorizontalScroller web/src/components/ui/HorizontalScroller.tsx
+    - Carruseles "Tu actividad" con tarjetas de canción
+
+  MetadataEditor    web/src/components/ui/MetadataEditor.tsx
+    - Editar título, artista, álbum, género, año, compositor, carátula
+    - Persiste en IndexedDB (no modifica archivo en disco — limitación web)
 
 --- Menú ⋮ canción (SongActionsMenu) ---
 
@@ -115,32 +168,44 @@ A) PÁGINA WEB — Rugdraiger Play
   Acciones:
     - Agregar a playlist (lista dinámica)
     - Agregar a la cola
+    - Agregar / quitar de favoritos
+    - Editar metadatos (MetadataEditor)
     - Quitar de playlist (si contexto playlist)
     - Eliminar canción (confirmación)
 
 --- Stores Zustand ---
 
   libraryStore   web/src/store/libraryStore.ts
-    songs, albums, artists (derivados), scan, deleteSong, artwork
+    songs, albums, artists, genres (derivados), scan, deleteSong, artwork
+    toggleFavorite, recordPlay, getFavorites, getMostPlayedThisMonth,
+    getRecentlyPlayed, getRecentlyAdded, updateSongMetadata
 
   playerStore    web/src/store/playerStore.ts
     cola, play/pause, seek, volume, mute, repeat, shuffle, full player
+    Sincroniza isFavorite al togglear favorito en canción actual
 
   eqStore        web/src/store/eqStore.ts
-    10 bandas, presets, enabled
+    10 bandas, presets, perfiles guardables (EQProfile), enabled
 
   playlistStore  web/src/store/playlistStore.ts
     CRUD playlists, add/remove songs
 
+  settingsStore  web/src/store/settingsStore.ts
+    gaplessPlayback, replayGainEnabled, dynamicColors, drivingMode,
+    mediaKeysEnabled, showLyrics — persistido en localStorage
+
 --- Servicios ---
 
-  scannerService.ts   — escaneo archivos/carpetas, formatos, inferencia metadata path
-  dbService.ts        — Dexie: songs, playlists, songBlobs, songArtworks
-  audioService.ts     — HTML audio + cadena BiquadFilter EQ
-  artworkService.ts   — tags embebidos + backfill iTunes Search API
-                        (fetchArtworkUrl, enrichSongsArtwork, pickBestMatch)
-  artworkFileService.ts — cache URLs locales (local://) y resolución src
-  audioFileService.ts — cache blobs en memoria
+  scannerService.ts      — escaneo archivos/carpetas, formatos, inferencia metadata
+  dbService.ts           — Dexie: songs, playlists, songBlobs, songArtworks, favoritos
+  audioService.ts        — HTML audio + EQ + gapless + ReplayGain
+  searchService.ts       — búsqueda indexada multi-campo en tiempo real
+  artworkService.ts      — tags embebidos + backfill iTunes Search API
+  artworkFileService.ts  — cache URLs locales (local://) y resolución src
+  audioFileService.ts    — cache blobs en memoria
+  colorUtils.ts          — color dominante carátula → acentos UI dinámicos
+  lyricsService.ts       — parse .lrc, línea activa sincronizada
+  mediaSessionService.ts — Media Session API (auriculares, Bluetooth, OS)
 
 --- Carátulas en la WEB (referencia para la APK) ---
 
@@ -174,7 +239,17 @@ A) PÁGINA WEB — Rugdraiger Play
 
 --- Formatos soportados (web) ---
 
-  mp3, flac, aac, m4a, ogg, wav, opus, wma, aiff, alac
+  Definidos en web/src/constants/audioFormats.ts
+  Lossless: flac, alac, wav, aiff (sin remuestreo en navegador)
+  Lossy: mp3, aac, m4a, ogg, opus, wma
+
+--- Audio avanzado (web) ---
+
+  Gapless playback: precarga siguiente pista (audioService + settings)
+  ReplayGain: lectura tag ID3 replayGain al reproducir
+  Ecualizador: 10 bandas BiquadFilter + presets + perfiles guardables
+  Media Session: play/pause/prev/next desde auriculares y OS
+  Gestos táctiles: useSwipeGestures en FullPlayer
 
 --- Escaneo biblioteca (web) ---
 
@@ -188,18 +263,67 @@ A) PÁGINA WEB — Rugdraiger Play
 --- Modelo Song (web/src/types/index.ts) ---
 
   id, title, artist, album, genre, duration (ms), fileSize, trackNumber,
-  format, isLossless, dateAdded, filePath, artwork, file (transient File)
+  format, isLossless, dateAdded, year, composer, filePath, artwork,
+  isFavorite, playCount, lastPlayed, replayGain, lyrics, file (transient)
 
 --- Componentes UI compartidos ---
 
   ArtworkDisplay, AlbumCoverArt, PlayableArtwork, VolumeFader, AppIcon,
-  ConfirmDialog, IconButton, songMenuUtils
+  ConfirmDialog, IconButton, songMenuUtils, FavoriteButton, HorizontalScroller,
+  MetadataEditor
 
 --- Branding ---
 
   web/src/constants/appBranding.ts
   APP_NAME: Rugdraiger Play
   APK_DOWNLOAD_URL: {base}apk/rugdraiger-play.apk
+  WINDOWS_DOWNLOAD_URL: GitHub raw gh-pages/windows/RugdraigerPlay-Windows.zip
+    (LFS; Pages no sirve el binario — el botón usa URL raw de GitHub)
+
+--- Cambios recientes WEB (24 mayo 2026) — RESUMEN ---
+
+  DASHBOARD / INICIO:
+    - Saludo dinámico + header con botones descarga Windows/Android responsivos
+    - Secciones "Tu actividad": Favoritas, Lo más escuchado del mes, Recientes
+    - Accesos rápidos Biblioteca: Artistas, Álbumes, Géneros, Canciones
+    - Recién añadidas y álbumes destacados
+
+  FAVORITOS:
+    - FavoriteButton reutilizable; estado desde libraryStore (fix toggle en reproductor)
+    - Corazón rojo intenso #FF2020 cuando marcado
+    - Secciones en Inicio + menú ⋮ + reproductor completo
+
+  BIBLIOTECA INTELIGENTE:
+    - playCount + lastPlayed por canción; estadísticas mensuales
+    - Búsqueda indexada multi-campo (searchService)
+    - Vista Géneros (GenresView)
+    - Editor metadatos (MetadataEditor) — solo IndexedDB
+
+  NAVEGACIÓN:
+    - Bottom nav: Biblioteca | Playlists | Buscar | Ajustes
+    - Nueva vista Ajustes (settingsStore en localStorage)
+
+  AUDIO / UI:
+    - Gapless, ReplayGain, ecualizador con perfiles guardables
+    - Colores dinámicos desde carátula (colorUtils)
+    - Modo conducción (DrivingModeView)
+    - Letras .lrc; Media Session API
+    - Gestos swipe en reproductor
+    - Mini player sin control de volumen
+
+  DESCARGAS:
+    - DownloadAppButtons en header Inicio + drawer móvil
+    - Enlace Windows junto a APK Android
+
+  DEPLOY:
+    - Fix VITE_BASE_PATH=/rugdraiger_play/ (evita 404 en JS/CSS)
+    - scripts/deploy-pwa.sh: autor git desde repo padre + Git LFS para ZIP Windows
+    - gh-pages commit d60b369 (24 mayo 2026)
+
+  LIMITACIONES WEB:
+    - Metadatos editados no escriben al archivo en disco
+    - Sincronización nube: placeholder "próximamente" en Ajustes
+    - ZIP Windows >100 MB → Git LFS; descarga vía URL raw GitHub
 
 
 ================================================================================
@@ -222,7 +346,79 @@ B) APP ANDROID NATIVA — Flutter (última versión)
   Build: ./scripts/build-apk.sh (Flutter, JDK 17, Android SDK, compileSdk 36)
   Copia web: web/public/apk/rugdraiger-play.apk
   Deploy gh-pages: ./scripts/deploy-pwa.sh (o push manual desde web/dist)
-  Último deploy gh-pages: 23 mayo 2026 (commit cbe62d1 — APK con carátulas iTunes)
+  Último deploy gh-pages: 25 mayo 2026 (commit 29cddd1 — nav inferior + fin de cola)
+
+--- Cambios recientes APK (25 mayo 2026) ---
+
+  BOTTOM NAV (accesos directos, izquierda → derecha):
+    Inicio | Playlists | Buscar | Ecualizador | Más
+    Archivos: bottom_nav_bar.dart, view_name.dart
+    Biblioteca, Ajustes y resto de vistas → menú "Más" (drawer)
+
+  FIN DE COLA / PLAYLIST:
+    Sin botón repeat activo (RepeatMode.none):
+      - Al terminar la última canción → pausa en la última pista (no vuelve al inicio)
+      - Botón siguiente en la última canción → no hace nada
+    Con repeat all (RepeatMode.all) → vuelve a la primera
+    Con repeat one (RepeatMode.one) → repite la canción actual
+    Archivos: audio_service.dart
+    Test: test/queue_end_behavior_test.dart
+
+--- Cambios recientes APK (24 mayo 2026) — PARIDAD CON WEB ---
+
+  DASHBOARD / INICIO (home_screen.dart):
+    - Saludo dinámico (Buenos días/tardes/noches)
+    - Botón búsqueda global en header
+    - Sección "Tu actividad": Favoritas, Lo más escuchado del mes, Recientes
+    - Accesos rápidos Biblioteca: Artistas, Álbumes, Géneros, Canciones
+    - Recién añadidas + álbumes destacados
+
+  FAVORITOS:
+    - FavoriteButton reutilizable (lib/presentation/widgets/favorite_button.dart)
+    - Corazón rojo #FF2020 en reproductor, inicio y menú ⋮
+    - toggleFavorite sincroniza songs + favorites en LibraryBloc
+
+  BIBLIOTECA INTELIGENTE:
+    - getMostPlayedThisMonth() + getRecentlyAdded() en database_helper.dart
+    - Búsqueda multi-campo: título, artista, álbum, género, año, formato
+    - GenresScreen (lib/presentation/screens/library/genres_screen.dart)
+    - MetadataEditorSheet — edita metadatos en SQLite (no archivo en disco)
+
+  NAVEGACIÓN:
+    - Bottom nav: Inicio | Playlists | Buscar | Ecualizador | Más
+    - SettingsScreen (lib/presentation/screens/settings/settings_screen.dart)
+    - settings_service.dart — gapless, ReplayGain, colores dinámicos, modo conducción
+
+  AUDIO / UI:
+    - Modo conducción: DrivingModeScreen overlay (botones grandes)
+    - Gestos swipe en carátula del reproductor (←/→ cambiar pista, tap pausa)
+    - Mini player sin barra de volumen (sin cambios, ya alineado con web)
+
+  ARCHIVOS NUEVOS:
+    lib/services/settings_service.dart
+    lib/presentation/widgets/favorite_button.dart
+    lib/presentation/widgets/metadata_editor_sheet.dart
+    lib/presentation/screens/settings/settings_screen.dart
+    lib/presentation/screens/library/genres_screen.dart
+    lib/presentation/screens/player/driving_mode_screen.dart
+
+  ARCHIVOS MODIFICADOS:
+    lib/core/navigation/view_name.dart — genres, settings
+    lib/presentation/widgets/bottom_nav_bar.dart
+    lib/presentation/widgets/mobile_nav_drawer.dart
+    lib/presentation/screens/home/main_scaffold.dart
+    lib/presentation/screens/home/home_screen.dart
+    lib/presentation/screens/library/library_hub_screen.dart
+    lib/presentation/widgets/song_actions_sheet.dart
+    lib/presentation/screens/player/player_screen.dart
+    lib/data/sources/database_helper.dart
+    lib/data/repositories/music_repository.dart
+    lib/presentation/bloc/library/library_bloc.dart
+
+  PRUEBAS:
+    flutter analyze — OK (solo info menor)
+    flutter test — 7 tests OK (carátulas Fire Force, Slipknot, únicas)
+    flutter build apk --release — OK (~25.8 MB arm64)
 
 --- Cambios recientes APK (23 mayo 2026) — RESUMEN ---
 

@@ -157,6 +157,9 @@ function readTagsFromFile(file: File): Promise<{
   genre?: string
   track?: number
   year?: number
+  composer?: string
+  replayGain?: number | null
+  lyrics?: string
   picture?: string
 }> {
   return new Promise((resolve) => {
@@ -169,6 +172,12 @@ function readTagsFromFile(file: File): Promise<{
       jsmediatags.read(file, {
         onSuccess: (tag: { tags: Record<string, unknown> }) => {
           const tags = tag.tags
+          const lyricsRaw = tags.unsynchronisedLyrics ?? tags.lyrics ?? tags.USLT
+          let lyrics = ''
+          if (typeof lyricsRaw === 'string') lyrics = lyricsRaw
+          else if (lyricsRaw && typeof lyricsRaw === 'object' && 'lyrics' in lyricsRaw) {
+            lyrics = String((lyricsRaw as { lyrics: string }).lyrics ?? '')
+          }
           resolve({
             title: tags.title as string | undefined,
             artist: tags.artist as string | undefined,
@@ -176,6 +185,9 @@ function readTagsFromFile(file: File): Promise<{
             genre: tags.genre as string | undefined,
             track: parseInt(String(tags.track ?? ''), 10) || undefined,
             year: parseInt(String(tags.year ?? ''), 10) || undefined,
+            composer: (tags.composer ?? tags.TPE3) as string | undefined,
+            replayGain: parseReplayGain(tags),
+            lyrics: lyrics || undefined,
             picture: extractPicture(tags),
           })
         },
@@ -185,6 +197,21 @@ function readTagsFromFile(file: File): Promise<{
       resolve({})
     }
   })
+}
+
+function parseReplayGain(tags: Record<string, unknown>): number | null {
+  const candidates = [
+    tags.REPLAYGAIN_TRACK_GAIN,
+    tags.replaygain_track_gain,
+    tags['TXXX:REPLAYGAIN_TRACK_GAIN'],
+  ]
+  for (const raw of candidates) {
+    if (raw == null) continue
+    const str = String(raw)
+    const match = str.match(/(-?\d+(?:\.\d+)?)\s*dB/i)
+    if (match) return parseFloat(match[1])
+  }
+  return null
 }
 
 function nameFromFile(filename: string): string {
@@ -295,14 +322,15 @@ function inferMetadataFromPath(file: File): { title?: string; artist?: string; a
 
 function resolveSongMetadata(
   file: File,
-  tags: { title?: string; artist?: string; album?: string; track?: number },
+  tags: { title?: string; artist?: string; album?: string; track?: number; year?: number },
 ) {
   const inferred = inferMetadataFromPath(file)
   const title = tags.title || inferred.title || nameFromFile(file.name)
   const artist = tags.artist || inferred.artist || 'Unknown Artist'
   const album = tags.album || inferred.album || 'Unknown Album'
   const trackNumber = tags.track || inferred.track || 0
-  return { title, artist, album, trackNumber }
+  const year = tags.year || 0
+  return { title, artist, album, trackNumber, year }
 }
 
 export function supportsDirectoryPicker(): boolean {
@@ -331,7 +359,7 @@ export async function scanFiles(
 
     const ext = getExtension(file.name)
     const [tags, duration] = await Promise.all([readTagsFromFile(file), getAudioDuration(file)])
-    const { title, artist, album, trackNumber } = resolveSongMetadata(file, tags)
+    const { title, artist, album, trackNumber, year } = resolveSongMetadata(file, tags)
 
     songs.push({
       id: generateId(file),
@@ -345,6 +373,13 @@ export async function scanFiles(
       format: ext,
       isLossless: LOSSLESS_FORMATS.includes(ext),
       dateAdded: Date.now(),
+      year,
+      composer: tags.composer || '',
+      isFavorite: false,
+      playCount: 0,
+      lastPlayed: 0,
+      replayGain: tags.replayGain ?? null,
+      lyrics: tags.lyrics || '',
       artwork: tags.picture,
       file,
       filePath: (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name,

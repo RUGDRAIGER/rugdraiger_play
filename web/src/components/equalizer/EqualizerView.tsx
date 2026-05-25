@@ -1,4 +1,5 @@
 import { useEQStore } from '../../store/eqStore'
+import { useState } from 'react'
 import type { EQBand } from '../../types'
 
 // Altura fija del área deslizable en píxeles
@@ -148,8 +149,9 @@ function EQBands({ bands, enabled, setBandGain }: EQBandsProps) {
 }
 
 export function EqualizerView() {
-  const { bands, enabled, activePreset, setEnabled, setBandGain, applyPreset, getPresetNames } = useEQStore()
+  const { bands, enabled, activePreset, savedProfiles, setEnabled, setBandGain, applyPreset, getPresetNames, saveCurrentAsProfile, deleteProfile, applyProfile } = useEQStore()
   const presets = getPresetNames()
+  const [profileName, setProfileName] = useState('')
 
   return (
     <div className="scrollable" style={{ flex: 1, padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -198,6 +200,38 @@ export function EqualizerView() {
             </button>
           ))}
         </div>
+      </div>
+
+      {savedProfiles.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Perfiles guardados</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {savedProfiles.map((profile) => (
+              <div key={profile.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button type="button" onClick={() => applyProfile(profile)} disabled={!enabled}
+                  style={{
+                    padding: '7px 14px', borderRadius: 20,
+                    background: activePreset === profile.name ? 'var(--accent)' : 'var(--bg-surface)',
+                    color: activePreset === profile.name ? '#fff' : 'var(--text-secondary)',
+                    border: `1px solid ${activePreset === profile.name ? 'var(--accent)' : 'var(--border)'}`,
+                    fontSize: 13, cursor: enabled ? 'pointer' : 'not-allowed',
+                  }}>
+                  {profile.name}
+                </button>
+                <button type="button" onClick={() => deleteProfile(profile.id)} style={{ color: 'var(--text-tertiary)', fontSize: 16, cursor: 'pointer', padding: '0 4px' }}>×</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input type="text" placeholder="Nombre del perfil..." value={profileName} onChange={(e) => setProfileName(e.target.value)}
+          style={{ flex: 1, padding: '9px 12px', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13 }} />
+        <button type="button" onClick={() => { saveCurrentAsProfile(profileName); setProfileName('') }} disabled={!enabled || !profileName.trim()}
+          style={{ padding: '9px 16px', borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: !profileName.trim() ? 0.5 : 1 }}>
+          Guardar perfil
+        </button>
       </div>
 
       {/* EQ Bands */}

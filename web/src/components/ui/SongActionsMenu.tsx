@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLibraryStore } from '../../store/libraryStore'
 import { usePlayerStore } from '../../store/playerStore'
 import { usePlaylistStore } from '../../store/playlistStore'
+import { MetadataEditor } from './MetadataEditor'
 import { ConfirmDialog } from './ConfirmDialog'
 import type { Song } from '../../types'
 
@@ -65,6 +66,7 @@ export function SongActionsMenu({
   const isOpen = isControlled ? open : internalOpen
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [editMetadata, setEditMetadata] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
   const [usePointerAnchor, setUsePointerAnchor] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -80,7 +82,7 @@ export function SongActionsMenu({
     if (isControlled && open) setInternalOpen(false)
   }, [isControlled, open])
 
-  const { deleteSong } = useLibraryStore()
+  const { deleteSong, toggleFavorite } = useLibraryStore()
   const { addToQueue, onSongRemoved } = usePlayerStore()
   const { playlists, addSongToPlaylist, removeSongFromPlaylist, loadPlaylists } = usePlaylistStore()
 
@@ -205,6 +207,14 @@ export function SongActionsMenu({
         </div>
       )}
       <div style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 4 }}>
+        <button type="button" onClick={async () => { await toggleFavorite(song.id); closeMenu() }}
+          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6, color: song.isFavorite ? 'var(--accent)' : undefined }}>
+          {song.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+        </button>
+        <button type="button" onClick={() => { setMenuOpen(false); setEditMetadata(true) }}
+          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+          Editar metadatos
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -265,6 +275,8 @@ export function SongActionsMenu({
         onConfirm={handleRemoveFromPlaylist}
         onCancel={() => setConfirmRemove(false)}
       />
+
+      <MetadataEditor song={song} open={editMetadata} onClose={() => setEditMetadata(false)} />
 
       <div
         ref={ref}

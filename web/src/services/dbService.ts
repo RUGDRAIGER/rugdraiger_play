@@ -35,6 +35,22 @@ class RugdraigerDB extends Dexie {
       songBlobs: 'id',
       songArtworks: 'id',
     })
+    this.version(4).stores({
+      songs: 'id, title, artist, album, genre, dateAdded, isFavorite, lastPlayed, playCount, year, composer',
+      playlists: 'id, name, createdAt',
+      songBlobs: 'id',
+      songArtworks: 'id',
+    }).upgrade((tx) =>
+      tx.table('songs').toCollection().modify((song: Song) => {
+        if (song.isFavorite == null) song.isFavorite = false
+        if (song.playCount == null) song.playCount = 0
+        if (song.lastPlayed == null) song.lastPlayed = 0
+        if (song.year == null) song.year = 0
+        if (song.composer == null) song.composer = ''
+        if (song.replayGain == null) song.replayGain = null
+        if (song.lyrics == null) song.lyrics = ''
+      }),
+    )
   }
 }
 
@@ -105,6 +121,29 @@ export const dbService = {
     await this.saveSongArtwork(id, artwork)
   },
 
+  async updateSong(id: string, patch: Partial<Song>): Promise<void> {
+    const { file, ...rest } = patch as Song
+    void file
+    await db.songs.update(id, rest)
+  },
+
+  async toggleFavorite(id: string): Promise<boolean> {
+    const song = await db.songs.get(id)
+    if (!song) return false
+    const isFavorite = !(song.isFavorite ?? false)
+    await db.songs.update(id, { isFavorite })
+    return isFavorite
+  },
+
+  async recordPlay(id: string): Promise<void> {
+    const song = await db.songs.get(id)
+    if (!song) return
+    await db.songs.update(id, {
+      playCount: (song.playCount ?? 0) + 1,
+      lastPlayed: Date.now(),
+    })
+  },
+
   async deleteSong(id: string): Promise<void> {
     await db.songs.delete(id)
     await db.songBlobs.delete(id)
@@ -132,7 +171,10 @@ export const dbService = {
         (s) =>
           s.title.toLowerCase().includes(q) ||
           s.artist.toLowerCase().includes(q) ||
-          s.album.toLowerCase().includes(q),
+          s.album.toLowerCase().includes(q) ||
+          (s.genre ?? '').toLowerCase().includes(q) ||
+          (s.composer ?? '').toLowerCase().includes(q) ||
+          String(s.year ?? '').includes(q),
       )
       .toArray()
   },

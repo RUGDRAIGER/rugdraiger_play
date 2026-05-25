@@ -73,7 +73,7 @@ class _SearchScreenState extends State<SearchScreen> {
           context.read<LibraryBloc>().add(SearchSongsEvent(query));
         },
         decoration: InputDecoration(
-          hintText: 'Search songs, artists, albums...',
+          hintText: 'Buscar canciones, artistas, álbumes, géneros…',
           prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted),
           suffixIcon: _controller.text.isNotEmpty
               ? IconButton(

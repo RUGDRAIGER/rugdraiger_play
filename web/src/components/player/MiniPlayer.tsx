@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { usePlayerStore } from '../../store/playerStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { audioService } from '../../services/audioService'
 import { formatDuration } from '../../services/scannerService'
 import { ArtworkDisplay } from '../ui/ArtworkDisplay'
@@ -11,12 +12,17 @@ export function MiniPlayer() {
     currentSong, isPlaying, progress, duration, volume, isMuted, playbackError,
     togglePlay, next, prev, seekTo, setVolume, toggleMute, setProgress, setDuration, setFullPlayer,
   } = usePlayerStore()
+  const gaplessPlayback = useSettingsStore((s) => s.gaplessPlayback)
 
   const progressRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const el = audioService.getElement()
-    const onTime = () => setProgress(el.currentTime)
+    const onTime = () => {
+      setProgress(el.currentTime)
+      const nextSong = usePlayerStore.getState().getNextSong()
+      audioService.maybePreloadGapless(el.currentTime, el.duration, nextSong, gaplessPlayback)
+    }
     const onMeta = () => setDuration(el.duration || 0)
     const onEnd = () => usePlayerStore.getState().next()
 
@@ -28,7 +34,7 @@ export function MiniPlayer() {
       el.removeEventListener('loadedmetadata', onMeta)
       el.removeEventListener('ended', onEnd)
     }
-  }, [setProgress, setDuration])
+  }, [setProgress, setDuration, gaplessPlayback])
 
   if (!currentSong) return null
 

@@ -20,13 +20,16 @@ class MobileNavDrawer extends StatelessWidget {
 
   static const _items = [
     (ViewName.home, 'Inicio', Icons.home_rounded),
-    (ViewName.library, 'Biblioteca', Icons.library_add_rounded),
+    (ViewName.library, 'Biblioteca', Icons.library_music_rounded),
     (ViewName.songs, 'Canciones', Icons.music_note_rounded),
     (ViewName.albums, 'Álbumes', Icons.album_rounded),
     (ViewName.artists, 'Artistas', Icons.person_rounded),
+    (ViewName.genres, 'Géneros', Icons.music_note_rounded),
+    (ViewName.favorites, 'Favoritos', Icons.favorite_rounded),
     (ViewName.playlists, 'Playlists', Icons.queue_music_rounded),
     (ViewName.equalizer, 'Ecualizador', Icons.graphic_eq_rounded),
     (ViewName.search, 'Buscar', Icons.search_rounded),
+    (ViewName.settings, 'Ajustes', Icons.settings_rounded),
   ];
 
   @override

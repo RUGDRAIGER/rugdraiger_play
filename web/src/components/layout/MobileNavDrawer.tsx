@@ -1,6 +1,6 @@
 import type { ViewName } from '../../types'
 import { AppIcon } from '../ui/AppIcon'
-import { APP_NAME, APK_DOWNLOAD_URL } from '../../constants/appBranding'
+import { APP_NAME, APK_DOWNLOAD_URL, WINDOWS_DOWNLOAD_URL } from '../../constants/appBranding'
 import { isNativeApp } from '../../utils/platform'
 import { NAV_ITEMS } from './navItems'
 
@@ -89,7 +89,7 @@ export function MobileNavDrawer({ open, activeView, onNavigate, onClose }: Props
         </nav>
 
         {!isNativeApp && (
-          <div style={{ padding: '8px 8px 16px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ padding: '8px 8px 16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
             <a
               href={APK_DOWNLOAD_URL}
               download="rugdraiger-play.apk"
@@ -111,7 +111,30 @@ export function MobileNavDrawer({ open, activeView, onNavigate, onClose }: Props
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
               </svg>
-              Download
+              Android
+            </a>
+            <a
+              href={WINDOWS_DOWNLOAD_URL}
+              download="RugdraigerPlay-Windows.zip"
+              onClick={onClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                width: '100%',
+                padding: '12px 12px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(255, 32, 32, 0.12)',
+                color: 'var(--accent)',
+                fontSize: 15,
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 5.5L10.5 4v7.5H3V5.5zm10.5 0L21 4v7.5h-7.5V5.5zM3 13.5h7.5V21L3 19.5v-6zm10.5 0H21V19.5L13.5 21v-7.5z" />
+              </svg>
+              Windows
             </a>
           </div>
         )}

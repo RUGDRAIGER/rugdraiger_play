@@ -7,9 +7,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/song_model.dart';
 import '../../../services/artwork_cache.dart';
-import '../../bloc/library/library_bloc.dart';
-import '../../bloc/player/player_bloc.dart' hide ToggleFavoriteEvent;
+import '../../bloc/player/player_bloc.dart';
 import '../../widgets/artwork_widget.dart';
+import '../../widgets/favorite_button.dart';
 import '../../widgets/volume_fader.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -272,68 +272,58 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _buildArtwork(PlayerBlocState state, double size) {
-    return Hero(
-      tag: 'artwork-${state.currentSong!.id}',
-      child: LargeArtworkWidget(
-        key: ValueKey('player-art-${state.currentSong!.id}-$_artworkKey'),
-        song: state.currentSong!,
-        size: size,
-      ).animate(target: state.isPlaying ? 1.0 : 0.95).scale(
-        begin: const Offset(0.95, 0.95),
-        end: const Offset(1.0, 1.0),
-        duration: 300.ms,
-        curve: Curves.easeOut,
+    return GestureDetector(
+      onTap: () => context.read<PlayerBloc>().add(const TogglePlayPauseEvent()),
+      onHorizontalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity < -200) {
+          context.read<PlayerBloc>().add(const SkipNextEvent());
+        } else if (velocity > 200) {
+          context.read<PlayerBloc>().add(const SkipPreviousEvent());
+        }
+      },
+      child: Hero(
+        tag: 'artwork-${state.currentSong!.id}',
+        child: LargeArtworkWidget(
+          key: ValueKey('player-art-${state.currentSong!.id}-$_artworkKey'),
+          song: state.currentSong!,
+          size: size,
+        ).animate(target: state.isPlaying ? 1.0 : 0.95).scale(
+          begin: const Offset(0.95, 0.95),
+          end: const Offset(1.0, 1.0),
+          duration: 300.ms,
+          curve: Curves.easeOut,
+        ),
       ),
     );
   }
 
   Widget _buildSongInfo(BuildContext context, PlayerBlocState state) {
     final song = state.currentSong!;
-    return BlocBuilder<LibraryBloc, LibraryBlocState>(
-      buildWhen: (prev, curr) => prev.favorites != curr.favorites,
-      builder: (context, libraryState) {
-        final isFavorite = libraryState.isFavorite(song.id);
-        return Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    song.title,
-                    style: AppTextStyles.displayMedium.copyWith(fontSize: 22),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    song.artist,
-                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.neonRed),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                song.title,
+                style: AppTextStyles.displayMedium.copyWith(fontSize: 22),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Semantics(
-              button: true,
-              label: isFavorite ? 'Quitar de me gusta' : 'Agregar a me gusta',
-              child: GestureDetector(
-                onTap: () => context.read<LibraryBloc>().add(ToggleFavoriteEvent(song.id)),
-                child: AnimatedContainer(
-                  duration: AppConstants.animFast,
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(
-                    isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: isFavorite ? AppColors.neonRed : AppColors.textMuted,
-                    size: 28,
-                  ),
-                ),
+              const SizedBox(height: 6),
+              Text(
+                song.artist,
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.neonRed),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+        FavoriteButton(song: song, size: 28),
+      ],
     );
   }
 

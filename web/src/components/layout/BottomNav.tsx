@@ -4,14 +4,15 @@ import { BOTTOM_NAV_ITEMS } from './navItems'
 interface Props {
   activeView: ViewName
   onNavigate: (view: ViewName) => void
-  onMenuOpen: () => void
 }
 
-export function BottomNav({ activeView, onNavigate, onMenuOpen }: Props) {
+export function BottomNav({ activeView, onNavigate }: Props) {
   return (
     <nav className="bottom-nav">
       {BOTTOM_NAV_ITEMS.map((item) => {
-        const isActive = activeView === item.id || (activeView === 'playlist-detail' && item.id === 'playlists')
+        const isActive = activeView === item.id ||
+          (activeView === 'playlist-detail' && item.id === 'playlists') ||
+          (['songs', 'albums', 'artists', 'genres'].includes(activeView) && item.id === 'library')
         return (
           <button
             key={item.id}
@@ -37,29 +38,6 @@ export function BottomNav({ activeView, onNavigate, onMenuOpen }: Props) {
           </button>
         )
       })}
-      <button
-        type="button"
-        aria-label="Más opciones"
-        onClick={onMenuOpen}
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 2,
-          minHeight: 'var(--bottom-nav-height)',
-          color: ['library', 'albums', 'artists'].includes(activeView) ? 'var(--accent)' : 'var(--text-tertiary)',
-          fontSize: 10,
-          fontWeight: ['library', 'albums', 'artists'].includes(activeView) ? 600 : 400,
-          cursor: 'pointer',
-        }}
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
-        </svg>
-        Más
-      </button>
     </nav>
   )
 }

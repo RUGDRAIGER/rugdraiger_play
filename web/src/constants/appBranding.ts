@@ -4,6 +4,10 @@ const base = import.meta.env.BASE_URL
 
 export const APK_DOWNLOAD_URL = `${base}apk/rugdraiger-play.apk`
 
+/** ZIP ~157 MB en LFS; GitHub Pages sirve el puntero, no el binario. */
+export const WINDOWS_DOWNLOAD_URL =
+  'https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/windows/RugdraigerPlay-Windows.zip'
+
 export const APP_ICONS = {
   /** Icono principal (1024×1024) */
   app: `${base}icons/app-icon.png`,

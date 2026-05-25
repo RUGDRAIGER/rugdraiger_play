@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { Song, RepeatMode } from '../types'
 import { audioService, AudioLoadError } from '../services/audioService'
+import { useSettingsStore } from './settingsStore'
+import { useLibraryStore } from './libraryStore'
 
 interface PlayerStore {
   currentSong: Song | null
@@ -33,6 +35,7 @@ interface PlayerStore {
   addToQueue: (song: Song) => void
   removeFromQueue: (index: number) => void
   onSongRemoved: (songId: string) => void
+  getNextSong: () => Song | null
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -48,10 +51,12 @@ async function startPlayback(
   song: Song,
   set: (partial: Partial<PlayerStore>) => void,
 ): Promise<void> {
+  const replayGainEnabled = useSettingsStore.getState().replayGainEnabled
   try {
-    await audioService.loadSong(song)
+    await audioService.loadSong(song, replayGainEnabled)
     await audioService.play()
     set({ isPlaying: true, playbackError: null })
+    void useLibraryStore.getState().recordPlay(song.id)
   } catch (e) {
     const message =
       e instanceof AudioLoadError
@@ -217,5 +222,16 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     }
     const idx = newQueue.findIndex((s) => s.id === currentSong?.id)
     set({ queue: newQueue, queueIndex: idx >= 0 ? idx : 0 })
+  },
+
+  getNextSong: () => {
+    const { queue, queueIndex, repeatMode, isShuffled, shuffledQueue } = get()
+    const activeQueue = isShuffled && shuffledQueue.length ? shuffledQueue : queue
+    let nextIdx = queueIndex + 1
+    if (nextIdx >= activeQueue.length) {
+      if (repeatMode === 'all') nextIdx = 0
+      else return null
+    }
+    return activeQueue[nextIdx] ?? null
   },
 }))

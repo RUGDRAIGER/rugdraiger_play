@@ -189,6 +189,32 @@ class MusicRepository {
   Future<List<SongModel>> getMostPlayed({int limit = 4}) =>
       _db.getMostPlayed(limit: limit);
 
+  Future<List<SongModel>> getMostPlayedThisMonth({int limit = 4}) =>
+      _db.getMostPlayedThisMonth(limit: limit);
+
+  Future<List<SongModel>> getRecentlyAdded({int limit = 8}) =>
+      _db.getRecentlyAdded(limit: limit);
+
+  Future<List<SongModel>> getSongsByGenre(String genre) =>
+      _db.getSongsByGenre(genre);
+
+  Future<void> updateSongMetadata(
+    int songId, {
+    String? title,
+    String? artist,
+    String? album,
+    String? genre,
+    int? year,
+  }) {
+    final fields = <String, dynamic>{};
+    if (title != null) fields['title'] = title;
+    if (artist != null) fields['artist'] = artist;
+    if (album != null) fields['album'] = album;
+    if (genre != null) fields['genre'] = genre;
+    if (year != null) fields['year'] = year;
+    return _db.updateSongMetadata(songId, fields);
+  }
+
   Future<List<SongModel>> getSongsByAlbum(String album) => _db.getSongsByAlbum(album);
 
   Future<List<SongModel>> getSongsByArtist(String artist) => _db.getSongsByArtist(artist);

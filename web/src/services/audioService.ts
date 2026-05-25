@@ -13,11 +13,15 @@ export class AudioLoadError extends Error {
 class AudioService {
   private audioCtx: AudioContext | null = null
   private source: MediaElementAudioSourceNode | null = null
+  private replayGainNode: GainNode | null = null
   private gainNode: GainNode | null = null
   private eqFilters: BiquadFilterNode[] = []
   private audioElement: HTMLAudioElement
   private objectUrl: string | null = null
   private currentSongId: string | null = null
+  private preloadedSongId: string | null = null
+  private preloadedBlob: Blob | null = null
+  private userVolume = 1
 
   constructor() {
     this.audioElement = new Audio()
@@ -29,6 +33,7 @@ class AudioService {
 
     this.audioCtx = new AudioContext()
     this.source = this.audioCtx.createMediaElementSource(this.audioElement)
+    this.replayGainNode = this.audioCtx.createGain()
     this.gainNode = this.audioCtx.createGain()
 
     this.eqFilters = EQ_FREQUENCIES.map((freq, i) => {
@@ -44,7 +49,8 @@ class AudioService {
     for (let i = 0; i < this.eqFilters.length - 1; i++) {
       this.eqFilters[i].connect(this.eqFilters[i + 1])
     }
-    this.eqFilters[this.eqFilters.length - 1].connect(this.gainNode)
+    this.eqFilters[this.eqFilters.length - 1].connect(this.replayGainNode)
+    this.replayGainNode.connect(this.gainNode)
     this.gainNode.connect(this.audioCtx.destination)
   }
 
@@ -52,15 +58,49 @@ class AudioService {
     return this.audioElement
   }
 
-  async loadSong(song: Song): Promise<void> {
-    if (this.currentSongId === song.id && this.audioElement.src) return
+  async preloadNext(song: Song): Promise<void> {
+    if (this.preloadedSongId === song.id && this.preloadedBlob) return
+    const blob = await resolveSongBlob(song)
+    if (!blob) return
+    this.preloadedSongId = song.id
+    this.preloadedBlob = blob
+  }
+
+  maybePreloadGapless(currentTime: number, duration: number, nextSong: Song | null, enabled: boolean) {
+    if (!enabled || !nextSong || !Number.isFinite(duration) || duration <= 0) return
+    if (duration - currentTime <= 3) {
+      void this.preloadNext(nextSong)
+    }
+  }
+
+  applyReplayGain(gainDb: number | null, enabled: boolean) {
+    this.ensureContext()
+    const linear = enabled && gainDb != null ? Math.pow(10, gainDb / 20) : 1
+    if (this.replayGainNode) {
+      this.replayGainNode.gain.value = Math.max(0.05, Math.min(4, linear))
+    }
+  }
+
+  async loadSong(song: Song, replayGainEnabled = true): Promise<void> {
+    if (this.currentSongId === song.id && this.audioElement.src) {
+      this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
+      return
+    }
 
     if (this.objectUrl) {
       URL.revokeObjectURL(this.objectUrl)
       this.objectUrl = null
     }
 
-    const blob = await resolveSongBlob(song)
+    let blob: Blob | null = null
+    if (this.preloadedSongId === song.id && this.preloadedBlob) {
+      blob = this.preloadedBlob
+      this.preloadedSongId = null
+      this.preloadedBlob = null
+    } else {
+      blob = await resolveSongBlob(song)
+    }
+
     if (!blob) {
       this.currentSongId = null
       this.audioElement.removeAttribute('src')
@@ -70,6 +110,7 @@ class AudioService {
     this.objectUrl = URL.createObjectURL(blob)
     this.audioElement.src = this.objectUrl
     this.currentSongId = song.id
+    this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
 
     await new Promise<void>((resolve, reject) => {
       const onReady = () => {
@@ -107,9 +148,10 @@ class AudioService {
   }
 
   setVolume(value: number): void {
-    this.audioElement.volume = Math.max(0, Math.min(1, value))
+    this.userVolume = Math.max(0, Math.min(1, value))
+    this.audioElement.volume = this.userVolume
     if (this.gainNode) {
-      this.gainNode.gain.value = value === 0 ? 0 : 1
+      this.gainNode.gain.value = this.userVolume === 0 ? 0 : 1
     }
   }
 
@@ -137,7 +179,7 @@ class AudioService {
   }
 
   getDefaultBands(): EQBand[] {
-    return EQ_FREQUENCIES.map((freq, i) => ({
+    return EQ_FREQUENCIES.map((freq) => ({
       frequency: freq,
       gain: 0,
       label: freq >= 1000 ? `${freq / 1000}k` : `${freq}`,

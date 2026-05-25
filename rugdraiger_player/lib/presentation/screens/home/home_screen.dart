@@ -10,8 +10,22 @@ import '../../bloc/library/library_bloc.dart';
 import '../../bloc/player/player_bloc.dart';
 import '../../utils/player_navigation.dart';
 import '../../widgets/album_card.dart';
-import '../../widgets/app_icon_widget.dart';
 import '../../widgets/artwork_widget.dart';
+import '../../widgets/favorite_button.dart';
+
+String _greeting() {
+  final h = DateTime.now().hour;
+  if (h < 12) return 'Buenos días';
+  if (h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+const _libraryLinks = [
+  (ViewName.artists, 'Artistas', Icons.person_rounded),
+  (ViewName.albums, 'Álbumes', Icons.album_rounded),
+  (ViewName.genres, 'Géneros', Icons.music_note_rounded),
+  (ViewName.songs, 'Canciones', Icons.music_note_rounded),
+];
 
 class HomeScreen extends StatefulWidget {
   final ValueChanged<ViewName>? onNavigate;
@@ -44,9 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
               slivers: [
                 _buildHeader(),
                 _buildScanSection(),
-                _buildMostPlayed(),
-                _buildFavorites(),
-                _buildRecentlyPlayed(),
+                _buildActivitySection(),
+                _buildLibraryLinks(),
+                _buildRecentlyAdded(),
                 _buildAlbumPreview(),
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
               ],
@@ -96,13 +110,17 @@ class _HomeScreenState extends State<HomeScreen> {
           return Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppIconWidget(size: 64, borderRadius: 14),
-                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        _greeting(),
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
                       Text(
                         AppConstants.appName,
                         style: AppTextStyles.displayMedium.copyWith(
@@ -116,16 +134,137 @@ class _HomeScreenState extends State<HomeScreen> {
                         state.songs.isNotEmpty
                             ? '${state.songs.length} canciones · ${state.albums.length} álbumes'
                             : 'Tu biblioteca de música local',
-                        style: AppTextStyles.bodyMedium,
+                        style: AppTextStyles.bodyMedium.copyWith(fontSize: 13),
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search_rounded, color: AppColors.textSecondary),
+                  tooltip: 'Buscar',
+                  onPressed: () => widget.onNavigate?.call(ViewName.search),
                 ),
               ],
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildActivitySection() {
+    return SliverToBoxAdapter(
+      child: BlocBuilder<LibraryBloc, LibraryBlocState>(
+        builder: (context, state) {
+          final hasActivity = state.favorites.isNotEmpty ||
+              state.mostPlayedThisMonth.isNotEmpty ||
+              state.recentlyPlayed.isNotEmpty;
+          if (!hasActivity) return const SizedBox.shrink();
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tu actividad', style: AppTextStyles.headlineMedium),
+                const SizedBox(height: 12),
+                if (state.favorites.isNotEmpty) _buildFavoritesContent(state),
+                if (state.mostPlayedThisMonth.isNotEmpty) _buildMostPlayedContent(state),
+                if (state.recentlyPlayed.isNotEmpty) _buildRecentlyPlayedContent(state),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLibraryLinks() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Biblioteca', style: AppTextStyles.headlineMedium),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: _libraryLinks.map((link) {
+                return ActionChip(
+                  avatar: Icon(link.$3, size: 18, color: AppColors.neonRed),
+                  label: Text(link.$2),
+                  backgroundColor: AppColors.surfaceCard,
+                  side: const BorderSide(color: AppColors.border),
+                  labelStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),
+                  onPressed: () => widget.onNavigate?.call(link.$1),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentlyAdded() {
+    return BlocBuilder<LibraryBloc, LibraryBlocState>(
+      builder: (context, state) {
+        if (state.recentlyAdded.isEmpty) return const SliverToBoxAdapter();
+        final preview = state.recentlyAdded.take(6).toList();
+        return SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+                child: Text('Recién añadidas', style: AppTextStyles.headlineMedium),
+              ),
+              SizedBox(
+                height: 120,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: preview.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final song = preview[index];
+                    return GestureDetector(
+                      onTap: () => _playSong(context, song, preview, index),
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              ArtworkWidget(song: song, size: 80, borderRadius: 10),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: FavoriteButton(song: song, size: 16),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              song.title,
+                              style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -199,103 +338,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMostPlayed() {
-    return BlocBuilder<LibraryBloc, LibraryBlocState>(
-      builder: (context, state) {
-        if (state.mostPlayed.isEmpty) return const SliverToBoxAdapter();
-        final items = state.mostPlayed.take(4).toList();
-        return SliverToBoxAdapter(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final isNarrow = width < 400;
-              final tileWidth = isNarrow ? (width - 44) / 2 : (width - 56) / 2;
-              final tileHeight = tileWidth + 52;
+  Widget _buildMostPlayedContent(LibraryBlocState state) {
+    final items = state.mostPlayedThisMonth.take(4).toList();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isNarrow = width < 400;
+        final tileWidth = isNarrow ? (width - 12) / 2 : (width - 12) / 2;
+        final tileHeight = tileWidth + 52;
 
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.trending_up_rounded, color: AppColors.neonRed, size: 22),
-                        const SizedBox(width: 8),
-                        Text('Lo más escuchado', style: AppTextStyles.headlineMedium),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: List.generate(items.length, (index) {
-                        final song = items[index];
-                        return SizedBox(
-                          width: tileWidth,
-                          height: tileHeight,
-                          child: _MostPlayedTile(
-                            rank: index + 1,
-                            song: song,
-                            playCount: song.playCount,
-                            onTap: () => _playSong(context, song, items, index),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFavorites() {
-    return BlocBuilder<LibraryBloc, LibraryBlocState>(
-      builder: (context, state) {
-        if (state.favorites.isEmpty) return const SliverToBoxAdapter();
-        final preview = state.favorites.take(6).toList();
-        return SliverToBoxAdapter(
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.favorite_rounded, color: AppColors.neonRed, size: 20),
-                        const SizedBox(width: 8),
-                        Text('Me gusta', style: AppTextStyles.headlineMedium),
-                      ],
-                    ),
-                    if (state.favorites.isNotEmpty)
-                      TextButton(
-                        onPressed: () => widget.onNavigate?.call(ViewName.favorites),
-                        child: Text('Ver todos', style: AppTextStyles.neonLabel),
-                      ),
-                  ],
-                ),
+              Row(
+                children: [
+                  Icon(Icons.trending_up_rounded, color: AppColors.neonRed, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Lo más escuchado del mes', style: AppTextStyles.titleMedium.copyWith(fontSize: 16)),
+                ],
               ),
-              SizedBox(
-                height: 128,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: preview.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final song = preview[index];
-                    return _FavoritePreviewTile(
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: List.generate(items.length, (index) {
+                  final song = items[index];
+                  return SizedBox(
+                    width: tileWidth,
+                    height: tileHeight,
+                    child: _MostPlayedTile(
+                      rank: index + 1,
                       song: song,
-                      onTap: () => _playSong(context, song, state.favorites, index),
-                    );
-                  },
-                ),
+                      playCount: song.playCount,
+                      onTap: () => _playSong(context, song, items, index),
+                    ),
+                  );
+                }),
               ),
             ],
           ),
@@ -304,53 +384,90 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecentlyPlayed() {
-    return BlocBuilder<LibraryBloc, LibraryBlocState>(
-      builder: (context, state) {
-        if (state.recentlyPlayed.isEmpty) return const SliverToBoxAdapter();
-        return SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildFavoritesContent(LibraryBlocState state) {
+    final preview = state.favorites.take(6).toList();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-                child: Text('Recientes', style: AppTextStyles.headlineMedium),
+              Row(
+                children: [
+                  Icon(Icons.favorite_rounded, color: AppColors.neonRed, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Favoritas', style: AppTextStyles.titleMedium.copyWith(fontSize: 16)),
+                ],
               ),
-              SizedBox(
-                height: 120,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: state.recentlyPlayed.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final song = state.recentlyPlayed[index];
-                    return GestureDetector(
-                      onTap: () => _playSong(context, song, state.recentlyPlayed, index),
-                      child: Column(
-                        children: [
-                          ArtworkWidget(song: song, size: 80, borderRadius: 10),
-                          const SizedBox(height: 6),
-                          SizedBox(
-                            width: 80,
-                            child: Text(
-                              song.title,
-                              style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              TextButton(
+                onPressed: () => widget.onNavigate?.call(ViewName.favorites),
+                child: Text('Ver todos', style: AppTextStyles.neonLabel),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 128,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: preview.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final song = preview[index];
+                return _FavoritePreviewTile(
+                  song: song,
+                  onTap: () => _playSong(context, song, state.favorites, index),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentlyPlayedContent(LibraryBlocState state) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Recientes', style: AppTextStyles.titleMedium.copyWith(fontSize: 16)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 120,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: state.recentlyPlayed.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final song = state.recentlyPlayed[index];
+                return GestureDetector(
+                  onTap: () => _playSong(context, song, state.recentlyPlayed, index),
+                  child: Column(
+                    children: [
+                      ArtworkWidget(song: song, size: 80, borderRadius: 10),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          song.title,
+                          style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -366,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Álbumes', style: AppTextStyles.headlineMedium),
+                  Text('Álbumes destacados', style: AppTextStyles.headlineMedium),
                   TextButton(
                     onPressed: () => widget.onNavigate?.call(ViewName.albums),
                     child: Text('Ver todos', style: AppTextStyles.neonLabel),

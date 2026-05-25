@@ -88,6 +88,23 @@ class ToggleFavoriteEvent extends LibraryEvent {
   const ToggleFavoriteEvent(this.songId);
 }
 
+class UpdateSongMetadataEvent extends LibraryEvent {
+  final int songId;
+  final String? title;
+  final String? artist;
+  final String? album;
+  final String? genre;
+  final int? year;
+  const UpdateSongMetadataEvent(
+    this.songId, {
+    this.title,
+    this.artist,
+    this.album,
+    this.genre,
+    this.year,
+  });
+}
+
 class RefreshPlayStatsEvent extends LibraryEvent {
   const RefreshPlayStatsEvent();
 }
@@ -101,6 +118,8 @@ class LibraryBlocState {
   final List<SongModel> searchResults;
   final List<SongModel> recentlyPlayed;
   final List<SongModel> mostPlayed;
+  final List<SongModel> mostPlayedThisMonth;
+  final List<SongModel> recentlyAdded;
   final List<SongModel> favorites;
   final List<String> albums;
   final List<String> artists;
@@ -117,6 +136,8 @@ class LibraryBlocState {
     this.searchResults = const [],
     this.recentlyPlayed = const [],
     this.mostPlayed = const [],
+    this.mostPlayedThisMonth = const [],
+    this.recentlyAdded = const [],
     this.favorites = const [],
     this.albums = const [],
     this.artists = const [],
@@ -138,6 +159,8 @@ class LibraryBlocState {
     List<SongModel>? searchResults,
     List<SongModel>? recentlyPlayed,
     List<SongModel>? mostPlayed,
+    List<SongModel>? mostPlayedThisMonth,
+    List<SongModel>? recentlyAdded,
     List<SongModel>? favorites,
     List<String>? albums,
     List<String>? artists,
@@ -154,6 +177,8 @@ class LibraryBlocState {
       searchResults: searchResults ?? this.searchResults,
       recentlyPlayed: recentlyPlayed ?? this.recentlyPlayed,
       mostPlayed: mostPlayed ?? this.mostPlayed,
+      mostPlayedThisMonth: mostPlayedThisMonth ?? this.mostPlayedThisMonth,
+      recentlyAdded: recentlyAdded ?? this.recentlyAdded,
       favorites: favorites ?? this.favorites,
       albums: albums ?? this.albums,
       artists: artists ?? this.artists,
@@ -188,6 +213,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
     on<LoadFavoritesEvent>(_onLoadFavorites);
     on<ToggleFavoriteEvent>(_onToggleFavorite);
     on<RefreshPlayStatsEvent>(_onRefreshPlayStats);
+    on<UpdateSongMetadataEvent>(_onUpdateSongMetadata);
     on<ClearLibraryEvent>(_onClearLibrary);
   }
 
@@ -197,7 +223,8 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
       final results = await Future.wait([
         _repository.getAllSongs(sortOrder: state.sortOrder),
         _repository.getRecentlyPlayed(),
-        _repository.getMostPlayed(limit: 4),
+        _repository.getMostPlayedThisMonth(limit: 4),
+        _repository.getRecentlyAdded(limit: 8),
         _repository.getAlbums(),
         _repository.getArtists(),
         _repository.getGenres(),
@@ -209,12 +236,14 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
         status: LibraryStatus.loaded,
         songs: results[0] as List<SongModel>,
         recentlyPlayed: results[1] as List<SongModel>,
+        mostPlayedThisMonth: results[2] as List<SongModel>,
         mostPlayed: results[2] as List<SongModel>,
-        albums: results[3] as List<String>,
-        artists: results[4] as List<String>,
-        genres: results[5] as List<String>,
-        playlists: results[6] as List<PlaylistModel>,
-        favorites: results[7] as List<SongModel>,
+        recentlyAdded: results[3] as List<SongModel>,
+        albums: results[4] as List<String>,
+        artists: results[5] as List<String>,
+        genres: results[6] as List<String>,
+        playlists: results[7] as List<PlaylistModel>,
+        favorites: results[8] as List<SongModel>,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -309,16 +338,33 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryBlocState> {
   Future<void> _onToggleFavorite(ToggleFavoriteEvent event, Emitter emit) async {
     await _repository.toggleFavorite(event.songId);
     final favorites = await _repository.getFavoriteSongs();
-    emit(state.copyWith(favorites: favorites));
+    final favoriteIds = favorites.map((s) => s.id).toSet();
+    final songs = state.songs
+        .map((s) => s.copyWith(isFavorite: favoriteIds.contains(s.id)))
+        .toList();
+    emit(state.copyWith(favorites: favorites, songs: songs));
   }
 
   Future<void> _onRefreshPlayStats(RefreshPlayStatsEvent event, Emitter emit) async {
     final recent = await _repository.getRecentlyPlayed();
-    final most = await _repository.getMostPlayed(limit: 4);
+    final most = await _repository.getMostPlayedThisMonth(limit: 4);
     emit(state.copyWith(
       recentlyPlayed: recent,
       mostPlayed: most,
+      mostPlayedThisMonth: most,
     ));
+  }
+
+  Future<void> _onUpdateSongMetadata(UpdateSongMetadataEvent event, Emitter emit) async {
+    await _repository.updateSongMetadata(
+      event.songId,
+      title: event.title,
+      artist: event.artist,
+      album: event.album,
+      genre: event.genre,
+      year: event.year,
+    );
+    add(const LoadLibraryEvent());
   }
 
   Future<void> _onClearLibrary(ClearLibraryEvent event, Emitter emit) async {

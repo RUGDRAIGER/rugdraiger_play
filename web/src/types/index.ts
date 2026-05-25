@@ -10,6 +10,13 @@ export interface Song {
   format: string
   isLossless: boolean
   dateAdded: number
+  year?: number
+  composer?: string
+  isFavorite?: boolean
+  playCount?: number
+  lastPlayed?: number
+  replayGain?: number | null
+  lyrics?: string
   filePath?: string
   artwork?: string
   file?: File
@@ -29,6 +36,12 @@ export interface Artist {
   name: string
   artwork?: string
   albumIds: string[]
+  songIds: string[]
+}
+
+export interface Genre {
+  id: string
+  name: string
   songIds: string[]
 }
 
@@ -64,7 +77,25 @@ export interface EQBand {
   label: string
 }
 
-export type ViewName = 'home' | 'library' | 'songs' | 'albums' | 'artists' | 'playlists' | 'playlist-detail' | 'equalizer' | 'search'
+export interface EQProfile {
+  id: string
+  name: string
+  bands: number[]
+  createdAt: number
+}
+
+export type ViewName =
+  | 'home'
+  | 'library'
+  | 'songs'
+  | 'albums'
+  | 'artists'
+  | 'genres'
+  | 'playlists'
+  | 'playlist-detail'
+  | 'equalizer'
+  | 'search'
+  | 'settings'
 
 export interface ScanProgress {
   total: number
@@ -72,4 +103,14 @@ export interface ScanProgress {
   current: string
   phase?: 'discovering' | 'processing'
   foldersScanned?: number
+}
+
+export interface SongMetadataPatch {
+  title?: string
+  artist?: string
+  album?: string
+  genre?: string
+  year?: number
+  composer?: string
+  artwork?: string
 }

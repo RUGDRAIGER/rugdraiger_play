@@ -4,7 +4,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/models/song_model.dart';
 import '../bloc/library/library_bloc.dart';
-import '../bloc/player/player_bloc.dart';
+import '../bloc/player/player_bloc.dart' hide ToggleFavoriteEvent;
+import 'metadata_editor_sheet.dart';
 
 Future<void> showSongActionsSheet(
   BuildContext context, {
@@ -142,6 +143,30 @@ class _SongActionsSheet extends StatelessWidget {
                     ),
                   ),
                 const Divider(color: AppColors.borderSubtle),
+                ListTile(
+                  leading: Icon(
+                    state.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: state.isFavorite(song.id) ? AppColors.neonRed : AppColors.textSecondary,
+                  ),
+                  title: Text(
+                    state.isFavorite(song.id) ? 'Quitar de favoritos' : 'Agregar a favoritos',
+                    style: TextStyle(
+                      color: state.isFavorite(song.id) ? AppColors.neonRed : AppColors.textPrimary,
+                    ),
+                  ),
+                  onTap: () {
+                    context.read<LibraryBloc>().add(ToggleFavoriteEvent(song.id));
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_rounded, color: AppColors.textSecondary),
+                  title: const Text('Editar metadatos', style: AppTextStyles.bodyLarge),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showMetadataEditorSheet(rootContext, song: song);
+                  },
+                ),
                 ListTile(
                   leading: const Icon(Icons.queue_music_rounded, color: AppColors.textSecondary),
                   title: const Text('Agregar a la cola', style: AppTextStyles.bodyLarge),

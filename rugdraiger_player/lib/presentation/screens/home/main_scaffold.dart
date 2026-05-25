@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/navigation/view_name.dart';
 import '../../../core/platform/platform_config.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../services/settings_service.dart';
 import '../../bloc/library/library_bloc.dart';
 import '../../bloc/player/player_bloc.dart';
 import '../../widgets/bottom_nav_bar.dart';
@@ -15,10 +16,13 @@ import '../home/home_screen.dart';
 import '../library/albums_screen.dart';
 import '../library/artists_screen.dart';
 import '../library/favorites_screen.dart';
+import '../library/genres_screen.dart';
 import '../library/library_hub_screen.dart';
 import '../library/songs_screen.dart';
+import '../player/driving_mode_screen.dart';
 import '../playlist/playlists_screen.dart';
 import '../search/search_screen.dart';
+import '../settings/settings_screen.dart';
 
 class MainScaffold extends StatefulWidget {
   final bool autoScanOnStart;
@@ -33,10 +37,12 @@ class _MainScaffoldState extends State<MainScaffold> {
   ViewName _activeView = ViewName.home;
   bool _drawerOpen = false;
   bool _initialScanDone = false;
+  final _settings = SettingsService.instance;
 
   @override
   void initState() {
     super.initState();
+    _settings.load();
     context.read<LibraryBloc>().add(const LoadLibraryEvent());
   }
 
@@ -68,6 +74,8 @@ class _MainScaffoldState extends State<MainScaffold> {
         return const AlbumsScreen();
       case ViewName.artists:
         return const ArtistsScreen();
+      case ViewName.genres:
+        return const GenresScreen();
       case ViewName.playlists:
         return const PlaylistsScreen();
       case ViewName.favorites:
@@ -76,6 +84,8 @@ class _MainScaffoldState extends State<MainScaffold> {
         return const EqualizerScreen();
       case ViewName.search:
         return const SearchScreen();
+      case ViewName.settings:
+        return SettingsScreen(onNavigateEqualizer: _navigate);
     }
   }
 
@@ -108,7 +118,10 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   Widget _buildShell() {
-    return Stack(
+    return ListenableBuilder(
+      listenable: _settings,
+      builder: (context, _) {
+        return Stack(
           children: [
             Column(
               children: [
@@ -135,7 +148,11 @@ class _MainScaffoldState extends State<MainScaffold> {
               onNavigate: _navigate,
               onClose: () => setState(() => _drawerOpen = false),
             ),
+            if (_settings.drivingMode)
+              const Positioned.fill(child: DrivingModeScreen()),
           ],
         );
+      },
+    );
   }
 }
