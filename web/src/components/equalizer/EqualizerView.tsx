@@ -1,4 +1,5 @@
 import { useEQStore } from '../../store/eqStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { useState } from 'react'
 import type { EQBand } from '../../types'
 
@@ -150,6 +151,7 @@ function EQBands({ bands, enabled, setBandGain }: EQBandsProps) {
 
 export function EqualizerView() {
   const { bands, enabled, activePreset, savedProfiles, setEnabled, setBandGain, applyPreset, getPresetNames, saveCurrentAsProfile, deleteProfile, applyProfile } = useEQStore()
+  const directAudioMode = useSettingsStore((s) => s.directAudioMode)
   const presets = getPresetNames()
   const [profileName, setProfileName] = useState('')
 
@@ -175,6 +177,12 @@ export function EqualizerView() {
           </div>
         </label>
       </div>
+
+      {directAudioMode && (
+        <div style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(255,32,32,0.08)', border: '1px solid var(--border-accent)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          El modo <strong style={{ color: 'var(--text-primary)' }}>Audio directo</strong> está activo en Ajustes. El ecualizador está en bypass para máxima fidelidad. Desactívalo en Ajustes si quieres usar EQ.
+        </div>
+      )}
 
       {/* Presets */}
       <div>

@@ -5,10 +5,9 @@
   "description": "Rugdraiger Play - escritorio Windows (misma UI que la web/APK)",
   "main": "main.js",
   "scripts": {
-    "build:web": "cd ../../web && VITE_CAPACITOR=true npm run build",
+    "build:web": "cd ../../web && (npm ci || npm install) && VITE_CAPACITOR=true npm run build",
     "pack:win": "npm run build:web && npm run pack:win:only",
-    "pack:win:only": "electron-packager . \"Rugdraiger Play\" --platform=win32 --arch=x64 --out=../RugdraigerPlay --overwrite --ignore=\"node_modules|package-lock.json|\\.git\" --extra-resource=../../web/dist",
-    "zip:win": "cd ../RugdraigerPlay && zip -r ../RugdraigerPlay-Windows.zip \"Rugdraiger Play-win32-x64\""
+    "pack:win:only": "electron-packager . \"Rugdraiger Play\" --platform=win32 --arch=x64 --out=../_packager-out --overwrite --ignore=\"node_modules|package-lock.json|\\.git|assets/app.iconset\" --extra-resource=../../web/dist --icon=assets/app-icon.png"
   },
   "devDependencies": {
     "@electron/packager": "^18.4.4",

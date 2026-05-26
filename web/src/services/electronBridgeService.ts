@@ -1,6 +1,6 @@
 import type { Song } from '../types'
 import type { ElectronPlayerStatePayload } from '../types/electron'
-import { isMacDesktop } from '../utils/platform'
+import { hasDesktopOverlay } from '../utils/platform'
 import { resolveArtworkSrc } from './artworkFileService'
 
 export function bindElectronNotchCommands(handlers: {
@@ -9,7 +9,7 @@ export function bindElectronNotchCommands(handlers: {
   onPrev: () => void
   onFocus?: () => void
 }): (() => void) | undefined {
-  if (!isMacDesktop || !window.electronAPI?.onNotchCommand) return undefined
+  if (!hasDesktopOverlay || !window.electronAPI?.onNotchCommand) return undefined
 
   return window.electronAPI.onNotchCommand((command) => {
     if (command === 'play-pause') handlers.onPlayPause()
@@ -23,7 +23,7 @@ export async function syncElectronPlayerState(
   song: Song | null,
   isPlaying: boolean,
 ): Promise<void> {
-  if (!isMacDesktop || !window.electronAPI?.sendPlayerState) return
+  if (!hasDesktopOverlay || !window.electronAPI?.sendPlayerState) return
 
   let artwork: string | undefined
   if (song?.artwork) {

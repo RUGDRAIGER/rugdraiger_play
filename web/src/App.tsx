@@ -24,7 +24,7 @@ import { SettingsView } from './components/settings/SettingsView'
 import { SplashScreen } from './components/ui/SplashScreen'
 import { mediaSessionService } from './services/mediaSessionService'
 import { bindElectronNotchCommands, syncElectronPlayerState } from './services/electronBridgeService'
-import { isMacDesktop } from './utils/platform'
+import { hasDesktopOverlay } from './utils/platform'
 import { supportsElectronScan } from './services/electronScannerService'
 
 export default function App() {
@@ -130,7 +130,7 @@ export default function App() {
   }, [progress, duration, mediaKeysEnabled])
 
   useEffect(() => {
-    if (!isMacDesktop) return
+    if (!hasDesktopOverlay) return
     return bindElectronNotchCommands({
       onPlayPause: () => void togglePlay(),
       onNext: () => void next(),
@@ -139,12 +139,12 @@ export default function App() {
         usePlayerStore.getState().setFullPlayer(true)
       },
     })
-  }, [isMacDesktop])
+  }, [hasDesktopOverlay])
 
   useEffect(() => {
-    if (!isMacDesktop) return
+    if (!hasDesktopOverlay) return
     void syncElectronPlayerState(currentSong, isPlaying)
-  }, [currentSong?.id, currentSong?.title, currentSong?.artist, currentSong?.artwork, isPlaying, isMacDesktop])
+  }, [currentSong?.id, currentSong?.title, currentSong?.artist, currentSong?.artwork, isPlaying, hasDesktopOverlay])
 
   function navigate(view: ViewName) {
     setNavTick((t) => t + 1)

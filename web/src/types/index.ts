@@ -16,6 +16,9 @@ export interface Song {
   playCount?: number
   lastPlayed?: number
   replayGain?: number | null
+  sampleRate?: number | null
+  bitDepth?: number | null
+  bitrate?: number | null
   lyrics?: string
   filePath?: string
   artwork?: string

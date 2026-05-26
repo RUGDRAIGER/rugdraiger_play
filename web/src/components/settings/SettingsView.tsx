@@ -47,16 +47,28 @@ export function SettingsView({ onNavigateEqualizer }: Props) {
       <section>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Reproducción</div>
         <Toggle
+          label="Audio directo (HiFi)"
+          description="Bypass del ecualizador y ReplayGain — señal lo más pura posible"
+          value={settings.directAudioMode}
+          onChange={settings.setDirectAudioMode}
+        />
+        <Toggle
           label="Gapless playback"
-          description="Transición sin silencios entre canciones del álbum"
+          description="Precarga la siguiente pista para transiciones más rápidas"
           value={settings.gaplessPlayback}
           onChange={settings.setGaplessPlayback}
         />
         <Toggle
           label="ReplayGain"
-          description="Normaliza el volumen entre pistas según metadatos"
+          description="Normaliza el volumen entre pistas (desactivado en audio directo)"
           value={settings.replayGainEnabled}
           onChange={settings.setReplayGainEnabled}
+        />
+        <Toggle
+          label="Crossfade"
+          description="Transición suave entre canciones (120 ms)"
+          value={settings.crossfadeEnabled}
+          onChange={settings.setCrossfadeEnabled}
         />
         <Toggle
           label="Teclas multimedia"

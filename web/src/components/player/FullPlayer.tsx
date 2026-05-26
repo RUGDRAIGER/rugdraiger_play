@@ -3,6 +3,7 @@ import { usePlayerStore } from '../../store/playerStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { audioService } from '../../services/audioService'
 import { formatDuration } from '../../services/scannerService'
+import { formatAudioQuality } from '../../services/audioTechParser'
 import { resolveArtworkSrc } from '../../services/artworkFileService'
 import { extractDominantColor, applyDynamicAccent } from '../../services/colorUtils'
 import { parseLrc, isLrcContent, getActiveLyricLine } from '../../services/lyricsService'
@@ -244,8 +245,8 @@ export function FullPlayer() {
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
               {currentSong.format && (
-                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: 'rgba(255,32,32,0.15)', color: accent, fontWeight: 600, textTransform: 'uppercase' }}>
-                  {currentSong.format}
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: 'rgba(255,32,32,0.15)', color: accent, fontWeight: 600 }}>
+                  {formatAudioQuality(currentSong)}
                 </span>
               )}
               {currentSong.isLossless && (

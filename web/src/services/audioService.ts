@@ -11,6 +11,10 @@ export class AudioLoadError extends Error {
   }
 }
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+}
+
 class AudioService {
   private audioCtx: AudioContext | null = null
   private source: MediaElementAudioSourceNode | null = null
@@ -23,6 +27,9 @@ class AudioService {
   private preloadedSongId: string | null = null
   private preloadedBlob: Blob | null = null
   private userVolume = 1
+  private directMode = true
+  private eqEnabled = false
+  private graphBuilt = false
 
   constructor() {
     this.audioElement = new Audio()
@@ -46,13 +53,41 @@ class AudioService {
       return filter
     })
 
-    this.source.connect(this.eqFilters[0])
-    for (let i = 0; i < this.eqFilters.length - 1; i++) {
-      this.eqFilters[i].connect(this.eqFilters[i + 1])
+    this.graphBuilt = true
+    this.rebuildGraph()
+  }
+
+  private rebuildGraph() {
+    if (!this.source || !this.replayGainNode || !this.gainNode) return
+
+    try { this.source.disconnect() } catch { /* first connect */ }
+    for (const f of this.eqFilters) {
+      try { f.disconnect() } catch { /* noop */ }
     }
-    this.eqFilters[this.eqFilters.length - 1].connect(this.replayGainNode)
+    try { this.replayGainNode.disconnect() } catch { /* noop */ }
+    try { this.gainNode.disconnect() } catch { /* noop */ }
+
+    const useEq = this.eqEnabled && !this.directMode
+
+    if (useEq) {
+      this.source.connect(this.eqFilters[0])
+      for (let i = 0; i < this.eqFilters.length - 1; i++) {
+        this.eqFilters[i].connect(this.eqFilters[i + 1])
+      }
+      this.eqFilters[this.eqFilters.length - 1].connect(this.replayGainNode)
+    } else {
+      this.source.connect(this.replayGainNode)
+    }
+
     this.replayGainNode.connect(this.gainNode)
-    this.gainNode.connect(this.audioCtx.destination)
+    this.gainNode.connect(this.audioCtx!.destination)
+    this.gainNode.gain.value = this.userVolume === 0 ? 0 : 1
+  }
+
+  setProcessingOptions(options: { directMode?: boolean; eqEnabled?: boolean }) {
+    if (options.directMode !== undefined) this.directMode = options.directMode
+    if (options.eqEnabled !== undefined) this.eqEnabled = options.eqEnabled
+    if (this.graphBuilt) this.rebuildGraph()
   }
 
   getElement(): HTMLAudioElement {
@@ -76,18 +111,14 @@ class AudioService {
 
   applyReplayGain(gainDb: number | null, enabled: boolean) {
     this.ensureContext()
-    const linear = enabled && gainDb != null ? Math.pow(10, gainDb / 20) : 1
+    const allowGain = enabled && !this.directMode
+    const linear = allowGain && gainDb != null ? Math.pow(10, gainDb / 20) : 1
     if (this.replayGainNode) {
       this.replayGainNode.gain.value = Math.max(0.05, Math.min(4, linear))
     }
   }
 
-  async loadSong(song: Song, replayGainEnabled = true): Promise<void> {
-    if (this.currentSongId === song.id && this.audioElement.src) {
-      this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
-      return
-    }
-
+  private async assignSource(song: Song): Promise<void> {
     if (this.objectUrl) {
       URL.revokeObjectURL(this.objectUrl)
       this.objectUrl = null
@@ -96,8 +127,8 @@ class AudioService {
     let blob: Blob | null = null
     let directUrl: string | null = null
 
-    if (song.filePath?.startsWith('/')) {
-      directUrl = await getElectronLocalFileUrl(song.filePath)
+    if (song.filePath?.startsWith('/') || /^[A-Za-z]:\\/.test(song.filePath ?? '')) {
+      directUrl = await getElectronLocalFileUrl(song.filePath!)
     }
 
     if (!directUrl) {
@@ -123,9 +154,10 @@ class AudioService {
       this.audioElement.src = this.objectUrl
     }
     this.currentSongId = song.id
-    this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
+  }
 
-    await new Promise<void>((resolve, reject) => {
+  private waitForMetadata(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
       const onReady = () => {
         cleanup()
         resolve()
@@ -142,6 +174,57 @@ class AudioService {
       this.audioElement.addEventListener('error', onError)
       this.audioElement.load()
     })
+  }
+
+  async loadSong(
+    song: Song,
+    replayGainEnabled = true,
+    options?: { crossfadeMs?: number },
+  ): Promise<void> {
+    const crossfadeMs = options?.crossfadeMs ?? 0
+    const isPlaying = !this.audioElement.paused && !!this.audioElement.src
+
+    if (this.currentSongId === song.id && this.audioElement.src) {
+      this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
+      return
+    }
+
+    if (crossfadeMs > 0 && isPlaying) {
+      await this.crossfadeLoad(song, replayGainEnabled, crossfadeMs)
+      return
+    }
+
+    this.ensureContext()
+    await this.assignSource(song)
+    this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
+    await this.waitForMetadata()
+  }
+
+  private async crossfadeLoad(song: Song, replayGainEnabled: boolean, crossfadeMs: number) {
+    this.ensureContext()
+    if (!this.gainNode) return
+
+    const steps = 10
+    const stepMs = Math.max(8, crossfadeMs / steps)
+    const wasPlaying = !this.audioElement.paused
+
+    for (let i = steps; i >= 0; i--) {
+      this.gainNode.gain.value = (this.userVolume === 0 ? 0 : 1) * (i / steps)
+      await delay(stepMs)
+    }
+
+    this.audioElement.pause()
+    await this.assignSource(song)
+    this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
+    await this.waitForMetadata()
+
+    if (wasPlaying) {
+      await this.play()
+      for (let i = 1; i <= steps; i++) {
+        this.gainNode!.gain.value = (this.userVolume === 0 ? 0 : 1) * (i / steps)
+        await delay(stepMs)
+      }
+    }
   }
 
   async play(): Promise<void> {

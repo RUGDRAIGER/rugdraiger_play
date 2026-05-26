@@ -1,4 +1,4 @@
-RugdraigerPlay-Portable/
-RugdraigerPlay/Rugdraiger Play-win32-x64/
-RugdraigerPlay-Windows.zip
-desktop-shell/node_modules/
+RugdraigerPlay/
+_packager-out/
+*.zip
+.DS_Store

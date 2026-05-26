@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rugdraiger Play — Notch</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    .notch-shell {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .notch-pill {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 29px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 32, 32, 0.35);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+      background: #0a0a0a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px 6px 6px;
+      opacity: 0;
+      transform: translateY(-8px) scale(0.96);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    .notch-pill.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .notch-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: blur(18px) brightness(0.45);
+      transform: scale(1.2);
+    }
+    .notch-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(10,10,10,0.82), rgba(255,32,32,0.18));
+    }
+    .notch-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-width: 0;
+    }
+    .cover {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+    }
+    .meta {
+      flex: 1;
+      min-width: 0;
+      color: #fff;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+    }
+    .cover-wrap {
+      flex-shrink: 0;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+      border-radius: 10px;
+      line-height: 0;
+    }
+    .meta .title {
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .meta .artist {
+      font-size: 10px;
+      color: rgba(255,255,255,0.72);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      -webkit-app-region: no-drag;
+    }
+    button {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    button:hover { background: rgba(255, 32, 32, 0.35); }
+    button:active { transform: scale(0.94); }
+    button.play {
+      width: 34px;
+      height: 34px;
+      background: rgba(255, 32, 32, 0.85);
+    }
+    button.play:hover { background: #ff2020; }
+    svg { display: block; }
+  </style>
+</head>
+<body>
+  <div class="notch-shell">
+    <div class="notch-pill" id="pill">
+      <div class="notch-bg" id="bg"></div>
+      <div class="notch-overlay"></div>
+      <div class="notch-content">
+        <div class="cover-wrap" id="coverWrap">
+          <img class="cover" id="cover" alt="" />
+        </div>
+        <div class="meta" id="meta">
+          <div class="title" id="title">Rugdraiger Play</div>
+          <div class="artist" id="artist">Sin reproducción</div>
+        </div>
+        <div class="controls">
+          <button type="button" id="prev" aria-label="Anterior">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          </button>
+          <button type="button" class="play" id="playPause" aria-label="Play/Pausa">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button type="button" id="next" aria-label="Siguiente">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const pill = document.getElementById('pill');
+    const bg = document.getElementById('bg');
+    const cover = document.getElementById('cover');
+    const titleEl = document.getElementById('title');
+    const artistEl = document.getElementById('artist');
+    const playIcon = document.getElementById('playIcon');
+    let playing = false;
+
+    function setPlaying(isPlaying) {
+      playing = isPlaying;
+      playIcon.innerHTML = isPlaying
+        ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+        : '<path d="M8 5v14l11-7z"/>';
+    }
+
+    function applyState(state) {
+      if (!state?.hasTrack) {
+        pill.classList.remove('visible');
+        return;
+      }
+      pill.classList.add('visible');
+      titleEl.textContent = state.title || 'Sin título';
+      artistEl.textContent = state.artist || 'Artista desconocido';
+      setPlaying(!!state.isPlaying);
+      if (state.artwork) {
+        cover.src = state.artwork;
+        bg.style.backgroundImage = `url("${state.artwork}")`;
+        cover.style.display = 'block';
+      } else {
+        cover.removeAttribute('src');
+        bg.style.backgroundImage = 'none';
+        cover.style.display = 'none';
+      }
+    }
+
+    document.getElementById('prev').addEventListener('click', () => window.notchAPI.sendCommand('prev'));
+    document.getElementById('next').addEventListener('click', () => window.notchAPI.sendCommand('next'));
+    document.getElementById('playPause').addEventListener('click', () => window.notchAPI.sendCommand('play-pause'));
+    document.getElementById('meta').addEventListener('click', () => window.notchAPI.sendCommand('focus'));
+    document.getElementById('coverWrap').addEventListener('click', () => window.notchAPI.sendCommand('focus'));
+
+    window.notchAPI.onState(applyState);
+  </script>
+</body>
+</html>

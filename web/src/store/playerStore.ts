@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Song, RepeatMode } from '../types'
 import { audioService, AudioLoadError } from '../services/audioService'
 import { useSettingsStore } from './settingsStore'
+import { useEQStore } from './eqStore'
 import { useLibraryStore } from './libraryStore'
 
 interface PlayerStore {
@@ -51,9 +52,23 @@ async function startPlayback(
   song: Song,
   set: (partial: Partial<PlayerStore>) => void,
 ): Promise<void> {
-  const replayGainEnabled = useSettingsStore.getState().replayGainEnabled
+  const {
+    replayGainEnabled,
+    directAudioMode,
+    crossfadeEnabled,
+    crossfadeMs,
+  } = useSettingsStore.getState()
+  const { enabled: eqEnabled } = useEQStore.getState()
+
+  audioService.setProcessingOptions({
+    directMode: directAudioMode,
+    eqEnabled: eqEnabled && !directAudioMode,
+  })
+
   try {
-    await audioService.loadSong(song, replayGainEnabled)
+    await audioService.loadSong(song, replayGainEnabled && !directAudioMode, {
+      crossfadeMs: crossfadeEnabled ? crossfadeMs : 0,
+    })
     await audioService.play()
     set({ isPlaying: true, playbackError: null })
     void useLibraryStore.getState().recordPlay(song.id)

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { EQBand, EQProfile } from '../types'
 import { audioService } from '../services/audioService'
+import { useSettingsStore } from './settingsStore'
 
 const PRESETS: Record<string, number[]> = {
   Flat:       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -47,13 +48,17 @@ interface EQStore {
 
 export const useEQStore = create<EQStore>((set, get) => ({
   bands: audioService.getDefaultBands(),
-  enabled: true,
+  enabled: false,
   activePreset: 'Flat',
   savedProfiles: loadProfiles(),
 
   setEnabled: (v) => {
     if (!v) audioService.resetEQ()
     else audioService.setAllEQBands(get().bands)
+    audioService.setProcessingOptions({
+      eqEnabled: v,
+      directMode: useSettingsStore.getState().directAudioMode,
+    })
     set({ enabled: v })
   },
 

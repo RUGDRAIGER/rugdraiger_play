@@ -4,6 +4,7 @@ import {
   LOSSLESS_FORMATS,
 } from '../constants/audioFormats'
 import { getElectronPathFromFile, generateSongIdForFile } from './electronPathUtils'
+import { parseAudioTechnicalInfo, type AudioTechnicalInfo } from './audioTechParser'
 import type { ElectronLocalFileEntry } from '../types/electron'
 import { getAudioMimeType } from '../constants/audioFormats'
 
@@ -371,6 +372,7 @@ export async function scanFiles(
 
     const ext = getExtension(file.name)
     const [tags, duration] = await Promise.all([readTagsFromFile(file), getAudioDuration(file)])
+    const tech = await parseAudioTechnicalInfo(file, ext, duration, file.size)
     const { title, artist, album, trackNumber, year } = resolveSongMetadata(file, tags)
 
     const electronPath = getElectronPathFromFile(file)
@@ -392,6 +394,9 @@ export async function scanFiles(
       playCount: 0,
       lastPlayed: 0,
       replayGain: tags.replayGain ?? null,
+      sampleRate: tech.sampleRate ?? null,
+      bitDepth: tech.bitDepth ?? null,
+      bitrate: tech.bitrate ?? null,
       lyrics: tags.lyrics || '',
       artwork: tags.picture,
       file,
@@ -550,6 +555,7 @@ export async function scanElectronEntries(
     const ext = getExtensionFromName(entry.name)
     let tags: Awaited<ReturnType<typeof readTagsFromFile>> = {}
     let duration = 0
+    let tech: AudioTechnicalInfo = {}
 
     try {
       const fileUrl = await api.getLocalFileUrl(entry.path)
@@ -565,6 +571,7 @@ export async function scanElectronEntries(
         configurable: true,
       })
       tags = await readTagsFromFile(pseudoFile)
+      tech = await parseAudioTechnicalInfo(buffer, ext, duration, entry.size)
     } catch {
       // Sin permiso o formato ilegible — usar metadatos mínimos desde la ruta
     }
@@ -598,6 +605,9 @@ export async function scanElectronEntries(
       playCount: 0,
       lastPlayed: 0,
       replayGain: tags.replayGain ?? null,
+      sampleRate: tech.sampleRate ?? null,
+      bitDepth: tech.bitDepth ?? null,
+      bitrate: tech.bitrate ?? null,
       lyrics: tags.lyrics || '',
       artwork: tags.picture,
       filePath: entry.path,
