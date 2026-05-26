@@ -141,7 +141,7 @@ export function HomeView({ onNavigate }: Props) {
       <input ref={dirInputRef} type="file" // @ts-expect-error webkitdirectory
         webkitdirectory="" directory="" multiple hidden onChange={(e) => { const f = Array.from(e.target.files ?? []); if (f.length) scanFromFiles(f); e.target.value = '' }} />
 
-      {error && !isScanning && <div style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(255,32,32,0.1)', color: 'var(--accent)', fontSize: 13 }}>{error}</div>}
+      {error && !isScanning && <div style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'var(--accent-soft-10)', color: 'var(--accent)', fontSize: 13 }}>{error}</div>}
       {isScanning && (
         <div style={{ padding: 14, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

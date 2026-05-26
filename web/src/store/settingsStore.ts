@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { audioService } from '../services/audioService'
+import { applyPlayerSkin } from '../services/themeService'
+import { DEFAULT_SKIN_ID } from '../constants/playerSkins'
 
 const STORAGE_KEY = 'rugdraiger_settings'
 
@@ -13,6 +15,7 @@ interface SettingsState {
   drivingMode: boolean
   mediaKeysEnabled: boolean
   showLyrics: boolean
+  skinId: string
   setGaplessPlayback: (v: boolean) => void
   setReplayGainEnabled: (v: boolean) => void
   setDirectAudioMode: (v: boolean) => void
@@ -22,6 +25,7 @@ interface SettingsState {
   setDrivingMode: (v: boolean) => void
   setMediaKeysEnabled: (v: boolean) => void
   setShowLyrics: (v: boolean) => void
+  setSkinId: (id: string) => void
 }
 
 function syncDirectMode(directAudioMode: boolean) {
@@ -48,6 +52,7 @@ function persistSettings(state: SettingsState) {
     drivingMode: state.drivingMode,
     mediaKeysEnabled: state.mediaKeysEnabled,
     showLyrics: state.showLyrics,
+    skinId: state.skinId,
   }))
 }
 
@@ -63,6 +68,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   drivingMode: saved.drivingMode ?? false,
   mediaKeysEnabled: saved.mediaKeysEnabled ?? true,
   showLyrics: saved.showLyrics ?? true,
+  skinId: saved.skinId ?? DEFAULT_SKIN_ID,
 
   setGaplessPlayback: (v) => {
     set({ gaplessPlayback: v })
@@ -101,6 +107,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ showLyrics: v })
     persistSettings(get())
   },
+  setSkinId: (id) => {
+    set({ skinId: id })
+    applyPlayerSkin(id)
+    persistSettings(get())
+  },
 }))
 
 syncDirectMode(useSettingsStore.getState().directAudioMode)
+applyPlayerSkin(useSettingsStore.getState().skinId)

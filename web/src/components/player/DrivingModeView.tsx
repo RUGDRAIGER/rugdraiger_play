@@ -52,7 +52,7 @@ export function DrivingModeView() {
         <button type="button" onClick={prev} style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--bg-surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
         </button>
-        <button type="button" onClick={togglePlay} style={{ width: 96, height: 96, borderRadius: '50%', background: 'var(--accent)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(255,32,32,0.45)' }}>
+        <button type="button" onClick={togglePlay} style={{ width: 96, height: 96, borderRadius: '50%', background: 'var(--accent)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px var(--accent-shadow-strong)' }}>
           {isPlaying
             ? <svg width="44" height="44" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
             : <svg width="44" height="44" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>

@@ -58,7 +58,7 @@ export function VolumeFader({
           top: '50%', transform: 'translateY(-50%)',
           height: 5, borderRadius: 3,
           width: `${level * 100}%`,
-          background: 'rgba(255, 32, 32, 0.40)',
+          background: 'var(--accent-soft-40)',
           transition: 'width 0.08s',
           pointerEvents: 'none',
         }} />

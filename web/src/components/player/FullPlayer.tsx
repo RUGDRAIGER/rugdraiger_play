@@ -148,7 +148,7 @@ export function FullPlayer() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                  background: i === queueIndex ? 'rgba(255,32,32,0.1)' : 'transparent',
+                  background: i === queueIndex ? 'var(--accent-soft-10)' : 'transparent',
                   cursor: 'pointer', marginBottom: 2,
                   position: 'relative',
                 }}
@@ -251,7 +251,7 @@ export function FullPlayer() {
               <button onClick={togglePlay} style={{
                 width: 64, height: 64, borderRadius: '50%', background: accent, color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
-                boxShadow: `0 8px 24px ${accentColor ? 'var(--dynamic-glow)' : 'rgba(255,32,32,0.4)'}`,
+                boxShadow: `0 8px 24px ${accentColor ? 'var(--dynamic-glow)' : 'var(--accent-shadow)'}`,
               }}>
                 {isPlaying
                   ? <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
@@ -272,12 +272,12 @@ export function FullPlayer() {
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
               {currentSong.format && (
-                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: 'rgba(255,32,32,0.15)', color: accent, fontWeight: 600 }}>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: 'var(--accent-soft-15)', color: accent, fontWeight: 600 }}>
                   {formatAudioQuality(currentSong)}
                 </span>
               )}
               {currentSong.isLossless && (
-                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: 'rgba(255,32,32,0.08)', color: accent, border: '1px solid var(--border-accent)' }}>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: 'var(--accent-soft-08)', color: accent, border: '1px solid var(--border-accent)' }}>
                   LOSSLESS
                 </span>
               )}

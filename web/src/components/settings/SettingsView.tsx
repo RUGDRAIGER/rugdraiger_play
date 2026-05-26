@@ -1,6 +1,8 @@
 import { useSettingsStore } from '../../store/settingsStore'
 import { useLibraryStore } from '../../store/libraryStore'
 import { LOSSLESS_FORMATS } from '../../constants/audioFormats'
+import { SkinPicker } from './SkinPicker'
+import { getSkinById } from '../../constants/playerSkins'
 
 function Toggle({ label, description, value, onChange }: {
   label: string
@@ -86,6 +88,16 @@ export function SettingsView({ onNavigateEqualizer }: Props) {
 
       <section>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Interfaz</div>
+        <div style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Skin del reproductor</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.5 }}>
+            Personaliza el color de acento de toda la interfaz. Tono actual:{' '}
+            <span style={{ color: getSkinById(settings.skinId)?.accent ?? 'var(--accent)', fontWeight: 600 }}>
+              {getSkinById(settings.skinId)?.name ?? 'Rojo'}
+            </span>
+          </div>
+          <SkinPicker />
+        </div>
         <Toggle
           label="Colores dinámicos"
           description="Acentos basados en la carátula del álbum actual"
@@ -127,7 +139,7 @@ export function SettingsView({ onNavigateEqualizer }: Props) {
 
       <section>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Próximamente</div>
-        <div style={{ padding: 14, borderRadius: 'var(--radius-md)', background: 'rgba(255,32,32,0.06)', border: '1px solid var(--border-accent)' }}>
+        <div style={{ padding: 14, borderRadius: 'var(--radius-md)', background: 'var(--accent-soft-06)', border: '1px solid var(--border-accent)' }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Sincronización en la nube</div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             Lectura de bibliotecas desde Google Drive o Dropbox (opcional, en desarrollo).

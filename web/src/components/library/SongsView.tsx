@@ -131,7 +131,7 @@ export function SongsView() {
                 style={{
                   display: 'grid', gridTemplateColumns: GRID,
                   padding: '8px 28px', gap: 8, alignItems: 'center',
-                  background: isCurrent ? 'rgba(255,32,32,0.08)' : 'transparent',
+                  background: isCurrent ? 'var(--accent-soft-08)' : 'transparent',
                   cursor: 'pointer', transition: 'background 0.1s',
                   position: 'relative',
                 }}

@@ -1,0 +1,33 @@
+---
+description: Regla de oro — nunca borrar sin confirmación explícita del usuario
+alwaysApply: true
+---
+
+# Regla de oro: no borrar sin confirmar
+
+**NUNCA** elimines, borres ni destruyas nada sin confirmación explícita del usuario antes.
+
+## Aplica a
+
+- Archivos y carpetas (`delete`, `rm`, `unlink`, vaciar contenido)
+- Código, funciones, componentes o features existentes
+- Datos de base de datos, playlists, biblioteca o configuración del usuario
+- Commits, ramas o historial git destructivo (`git reset --hard`, `git push --force`, etc.)
+- Dependencias, assets, builds publicados o recursos en la nube
+
+## Antes de cualquier borrado
+
+1. **Explicar** qué se va a borrar y por qué
+2. **Pedir confirmación** y esperar respuesta afirmativa explícita
+3. Si no hay confirmación clara, **no borrar** — proponer alternativas (mover, renombrar, comentar, desactivar)
+
+## Excepciones
+
+Ninguna. Aunque parezca obvio, temporal o parte de una refactorización, **siempre confirmar primero**.
+
+## Ejemplo
+
+```
+❌ Mal: borrar `OldComponent.tsx` porque ya no se usa
+✅ Bien: "¿Confirmas que borre `OldComponent.tsx`? Ya no tiene referencias."
+```

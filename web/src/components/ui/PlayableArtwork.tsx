@@ -53,7 +53,7 @@ export function PlayableArtwork({ song, size = 36, borderRadius = 4, onPlay }: P
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(255, 32, 32, 0.55)',
+            boxShadow: '0 2px 10px var(--accent-soft-55)',
             transform: hovered ? 'scale(1)' : 'scale(0.85)',
             transition: 'transform 0.15s',
           }}

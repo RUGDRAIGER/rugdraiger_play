@@ -279,7 +279,7 @@ export function SongActionsMenu({
             setConfirmDelete(true)
           }}
           style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6, color: 'var(--accent)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,32,32,0.1)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-soft-10)' }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
         >
           {deleteLabel}

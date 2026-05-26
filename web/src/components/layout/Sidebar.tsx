@@ -47,7 +47,7 @@ export function Sidebar({ activeView, onNavigate }: Props) {
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: 'var(--radius-md)',
-                background: isActive ? 'rgba(255, 32, 32, 0.12)' : 'transparent',
+                background: isActive ? 'var(--accent-nav-active)' : 'transparent',
                 color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
                 fontSize: 14,
                 fontWeight: isActive ? 600 : 400,

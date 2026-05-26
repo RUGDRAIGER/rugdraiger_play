@@ -8,6 +8,15 @@ interface Props {
   className?: string
 }
 
+/** Mano extendida (palma abierta) — parar cola al terminar el tema */
+export function ExtendedHandIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M23 5.5V20c0 2.2-1.8 4-4 4h-7.3c-1.08 0-2.1-.43-2.85-1.19L1 14.83s1.26-1.23 1.3-1.25c.22-.19.49-.29.79-.29.22 0 .42.06.61.16.11.06.22.07.33.04l5.83-1.66V4.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5V8h1V3.5C13 2.67 13.67 2 14.5 2S16 2.67 16 3.5V8h1V4.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5V11h1V5.5C20 4.67 20.67 4 21.5 4S23 4.67 23 5.5z" />
+    </svg>
+  )
+}
+
 export function StopAfterHandButton({ songId, size = 22, style, className }: Props) {
   const active = usePlayerStore((s) => s.stopAfterSongIds.includes(songId))
   const toggleStopAfterSong = usePlayerStore((s) => s.toggleStopAfterSong)
@@ -25,25 +34,23 @@ export function StopAfterHandButton({ songId, size = 22, style, className }: Pro
       title={active ? 'Parar la cola al terminar este tema' : 'Continuar con la cola al terminar'}
       aria-pressed={active}
       style={{
-        width: size + 8,
-        height: size + 8,
+        width: size + 10,
+        height: size + 10,
         borderRadius: '50%',
-        border: active ? '2px solid #ff1a1a' : '1px solid var(--border)',
-        background: active ? 'rgba(255, 26, 26, 0.35)' : 'transparent',
-        color: active ? '#ff3333' : 'var(--text-tertiary)',
+        border: active ? '2px solid var(--accent-intense)' : '1px solid var(--border)',
+        background: active ? 'var(--accent-soft-35)' : 'transparent',
+        color: active ? 'var(--accent-intense)' : 'var(--text-tertiary)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
         flexShrink: 0,
-        boxShadow: active ? '0 0 12px rgba(255, 26, 26, 0.55)' : 'none',
+        boxShadow: active ? '0 0 14px var(--accent-glow-strong)' : 'none',
         transition: 'all 0.15s',
         ...style,
       }}
     >
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <path d="M18 11V9h2V4.72C20 3.62 18.94 2.5 17.82 2.5H13v2.5c0 .83-.67 1.5-1.5 1.5S10 6.83 10 6V2.5H7.82C6.7 2.5 5.64 3.4 5.64 4.5V9.5H4v6h5v7c0 1.1.9 2 2 2h6v-9.36c0-2.03 1.53-3.64 3.46-3.64 1.39 0 2.54.83 3.05 2.03.22.58.95.96 1.54.96.8 0 1.46-.65 1.46-1.45V11h-6z" />
-      </svg>
+      <ExtendedHandIcon size={size} />
     </button>
   )
 }
