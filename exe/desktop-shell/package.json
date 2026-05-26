@@ -6,11 +6,13 @@
   "main": "main.js",
   "scripts": {
     "build:web": "cd ../../web && (npm ci || npm install) && VITE_CAPACITOR=true npm run build",
-    "pack:win": "npm run build:web && npm run pack:win:only",
-    "pack:win:only": "electron-packager . \"Rugdraiger Play\" --platform=win32 --arch=x64 --out=../_packager-out --overwrite --ignore=\"node_modules|package-lock.json|\\.git|assets/app.iconset\" --extra-resource=../../web/dist --icon=assets/app-icon.png"
+    "make:ico": "node scripts/make-ico.js",
+    "pack:win": "npm run build:web && npm run make:ico && npm run pack:win:only",
+    "pack:win:only": "electron-packager . \"Rugdraiger Play\" --platform=win32 --arch=x64 --out=../_packager-out --overwrite --ignore=\"node_modules|package-lock.json|\\.git|assets/app.iconset|scripts\" --extra-resource=../../web/dist --icon=assets/app-icon.ico"
   },
   "devDependencies": {
     "@electron/packager": "^18.4.4",
-    "electron": "^33.2.1"
+    "electron": "^33.2.1",
+    "png-to-ico": "^2.1.8"
   }
 }

@@ -19,6 +19,9 @@ const SKIP_DIR_NAMES = new Set([
   'saved application state', 'saved application state',
   'containers', 'group containers', 'webkit', 'google', 'microsoft',
   'slack', 'discord', 'zoom.us', 'code cache', 'gpuarchives',
+  'appdata', 'program files', 'program files (x86)', 'windows',
+  '$recycle.bin', 'system volume information', 'recovery',
+  'perflogs', 'programdata', 'msocache',
 ]);
 
 /** Subcarpetas de ~/Library que se omiten (el resto de Library sí se escanea) */

@@ -193,7 +193,14 @@ function createOverlayWindow() {
     },
   };
 
-  if (isMac) winOpts.type = 'panel';
+  if (isMac) {
+    winOpts.type = 'panel';
+  }
+
+  if (isWin) {
+    winOpts.backgroundColor = '#00000000';
+    winOpts.thickFrame = false;
+  }
 
   overlayWin = new BrowserWindow(winOpts);
 
@@ -201,11 +208,18 @@ function createOverlayWindow() {
     overlayWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   }
 
+  if (isWin) {
+    overlayWin.setAlwaysOnTop(true, 'screen-saver');
+    overlayWin.setVisibleOnAllWorkspaces(true);
+  }
+
   overlayWin.loadFile(path.join(__dirname, 'notch.html'));
 }
 
 function createWindow() {
-  const iconPath = assetPath('assets', 'app-icon.png');
+  const iconPath = fs.existsSync(assetPath('assets', 'app-icon.ico'))
+    ? assetPath('assets', 'app-icon.ico')
+    : assetPath('assets', 'app-icon.png');
 
   mainWin = new BrowserWindow({
     width: 1280,

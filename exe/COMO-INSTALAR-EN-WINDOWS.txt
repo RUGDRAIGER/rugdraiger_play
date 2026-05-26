@@ -26,9 +26,11 @@ En un PC Windows con Flutter + Visual Studio 2022:
 ═══════════════════════════════════════════════════════════
   PRIMER USO
 ═══════════════════════════════════════════════════════════
-• La app escanea automáticamente tu carpeta Música y Descargas
-• También puedes usar  Escanear carpeta  en la pantalla Inicio
-• Mismo diseño negro/rojo que la APK y la web
+• La app escanea automáticamente Escritorio, Documentos, Descargas, Videos, Imágenes y Música
+• También puedes usar  Escanear dispositivo  o  Elegir carpeta  en Inicio
+• Mismo diseño negro/rojo que la APK, la web y la app de Mac
+• Mini reproductor flotante (notch): al minimizar o cambiar de ventana, aparece arriba al centro con controles rápidos y carátula
+• Pantalla de carga cyberpunk al iniciar · Audio directo HiFi · Ecualizador · ReplayGain
 
 NOTA: Windows puede mostrar "Windows protegió tu PC" la primera vez.
   → Más información → Ejecutar de todas formas
