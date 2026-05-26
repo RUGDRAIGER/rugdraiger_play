@@ -1,0 +1,49 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'rugdraiger_player/**'
+      - 'exe/**'
+      - '.github/workflows/build-windows-exe.yml'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: rugdraiger_player
+        run: flutter pub get
+
+      - name: Build Windows release
+        working-directory: rugdraiger_player
+        run: flutter build windows --release
+
+      - name: Package RugdraigerPlay folder
+        shell: pwsh
+        run: |
+          $src = "rugdraiger_player/build/windows/x64/runner/Release"
+          $dst = "exe/RugdraigerPlay"
+          if (Test-Path $dst) { Remove-Item $dst -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          Copy-Item "$src/*" $dst -Recurse -Force
+          Compress-Archive -Path $dst -DestinationPath "exe/RugdraigerPlay-win64.zip" -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RugdraigerPlay-win64
+          path: |
+            exe/RugdraigerPlay-win64.zip
+            exe/RugdraigerPlay/
