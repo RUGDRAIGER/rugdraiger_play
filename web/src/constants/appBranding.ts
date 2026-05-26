@@ -8,6 +8,10 @@ export const APK_DOWNLOAD_URL = `${base}apk/rugdraiger-play.apk`
 export const WINDOWS_DOWNLOAD_URL =
   'https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/windows/RugdraigerPlay-Windows.zip'
 
+/** ZIP ~289 MB en LFS; GitHub Pages sirve el puntero, no el binario. */
+export const MACOS_DOWNLOAD_URL =
+  'https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/macos/RugdraigerPlay-macOS.zip'
+
 export const APP_ICONS = {
   /** Icono principal (1024×1024) */
   app: `${base}icons/app-icon.png`,

@@ -1,5 +1,6 @@
 import type { Song, EQBand } from '../types'
 import { resolveSongBlob } from './audioFileService'
+import { getElectronLocalFileUrl } from './electronBridgeService'
 
 const EQ_FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 
@@ -93,22 +94,34 @@ class AudioService {
     }
 
     let blob: Blob | null = null
-    if (this.preloadedSongId === song.id && this.preloadedBlob) {
-      blob = this.preloadedBlob
-      this.preloadedSongId = null
-      this.preloadedBlob = null
-    } else {
-      blob = await resolveSongBlob(song)
+    let directUrl: string | null = null
+
+    if (song.filePath?.startsWith('/')) {
+      directUrl = await getElectronLocalFileUrl(song.filePath)
     }
 
-    if (!blob) {
+    if (!directUrl) {
+      if (this.preloadedSongId === song.id && this.preloadedBlob) {
+        blob = this.preloadedBlob
+        this.preloadedSongId = null
+        this.preloadedBlob = null
+      } else {
+        blob = await resolveSongBlob(song)
+      }
+    }
+
+    if (!directUrl && !blob) {
       this.currentSongId = null
       this.audioElement.removeAttribute('src')
       throw new AudioLoadError()
     }
 
-    this.objectUrl = URL.createObjectURL(blob)
-    this.audioElement.src = this.objectUrl
+    if (directUrl) {
+      this.audioElement.src = directUrl
+    } else if (blob) {
+      this.objectUrl = URL.createObjectURL(blob)
+      this.audioElement.src = this.objectUrl
+    }
     this.currentSongId = song.id
     this.applyReplayGain(song.replayGain ?? null, replayGainEnabled)
 

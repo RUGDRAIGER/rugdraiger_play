@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Song } from '../../types'
-import type { MenuAnchorPoint } from './SongActionsMenu'
+import type { AlbumMenuInfo, MenuAnchorPoint } from './SongActionsMenu'
 import { ArtworkDisplay } from './ArtworkDisplay'
 import { SongActionsMenu } from './SongActionsMenu'
 
@@ -14,6 +14,8 @@ interface Props {
   className?: string
   style?: React.CSSProperties
   menuSong?: Song | null
+  albumMenu?: AlbumMenuInfo
+  onAlbumDeleted?: () => void
   onClick?: () => void
 }
 
@@ -27,13 +29,18 @@ export function AlbumCoverArt({
   className,
   style,
   menuSong,
+  albumMenu,
+  onAlbumDeleted,
   onClick,
 }: Props) {
   const [hovered, setHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [anchorPoint, setAnchorPoint] = useState<MenuAnchorPoint | null>(null)
 
+  const hasMenu = menuSong && (albumMenu || true)
+
   function openMenuAtPointer(e: React.MouseEvent) {
+    if (!menuSong) return
     e.preventDefault()
     e.stopPropagation()
     setAnchorPoint({ x: e.clientX, y: e.clientY })
@@ -58,7 +65,7 @@ export function AlbumCoverArt({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onClick}
-      onContextMenu={menuSong ? openMenuAtPointer : undefined}
+      onContextMenu={hasMenu ? openMenuAtPointer : undefined}
     >
       <div
         style={{
@@ -94,10 +101,13 @@ export function AlbumCoverArt({
           <SongActionsMenu
             song={menuSong}
             variant="overlay"
+            menuContext={albumMenu ? 'album' : 'song'}
+            albumInfo={albumMenu}
             open={menuOpen}
             anchorPoint={anchorPoint}
             onClearAnchor={() => setAnchorPoint(null)}
             onOpenChange={handleMenuOpenChange}
+            onAfterDelete={albumMenu ? onAlbumDeleted : undefined}
           />
         </div>
       )}

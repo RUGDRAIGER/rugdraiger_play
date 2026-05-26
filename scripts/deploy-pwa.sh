@@ -16,6 +16,7 @@ AUTHOR_EMAIL="$(git -C "$WEB/.." log -1 --format='%ae')"
 cd dist
 git lfs install 2>/dev/null || true
 git lfs track "windows/*.zip" 2>/dev/null || true
+git lfs track "macos/*.zip" 2>/dev/null || true
 git init -b gh-pages
 git remote add origin "$REPO_URL" 2>/dev/null || git remote set-url origin "$REPO_URL"
 git add -A

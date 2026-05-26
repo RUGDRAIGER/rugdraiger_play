@@ -21,6 +21,18 @@ export function AlbumsView() {
 
   if (selected) {
     const albumSongs = getAlbumSongs(selected.id)
+    const albumMenu = {
+      id: selected.id,
+      title: selected.title,
+      artist: selected.artist,
+      songIds: albumSongs.map((s) => s.id),
+    }
+
+    const handleSongDeletedFromAlbum = () => {
+      const remaining = useLibraryStore.getState().getAlbumSongs(selected.id)
+      if (remaining.length === 0) setSelected(null)
+    }
+
     return (
       <div className="view-panel">
         <div className="scrollable view-scroll" onClick={() => setMenuState(null)}>
@@ -44,6 +56,8 @@ export function AlbumsView() {
               size={140}
               borderRadius={12}
               menuSong={albumSongs[0] ?? null}
+              albumMenu={albumMenu}
+              onAlbumDeleted={() => setSelected(null)}
               style={{ width: 140, height: 140, flexShrink: 0 }}
             />
             <div style={{ minWidth: 0 }}>
@@ -90,6 +104,7 @@ export function AlbumsView() {
                   open={menuState?.songId === song.id}
                   anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
                   onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
+                  onAfterDelete={handleSongDeletedFromAlbum}
                 />
               </div>
             ))}
@@ -133,6 +148,12 @@ export function AlbumsView() {
                       size={150}
                       borderRadius={10}
                       menuSong={albumSongs[0] ?? null}
+                      albumMenu={{
+                        id: album.id,
+                        title: album.title,
+                        artist: album.artist,
+                        songIds: albumSongs.map((s) => s.id),
+                      }}
                       style={{ width: '100%', height: '100%' }}
                     />
                   </div>

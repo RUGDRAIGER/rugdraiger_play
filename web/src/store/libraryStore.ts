@@ -2,10 +2,16 @@ import { create } from 'zustand'
 import type { Song, Album, Artist, Genre, ScanProgress, SongMetadataPatch } from '../types'
 import { dbService } from '../services/dbService'
 import { scanFiles, scanDirectory, getScanErrorMessage, filterAudioFiles } from '../services/scannerService'
+import {
+  scanElectronFullDevice,
+  scanElectronPickedFolder,
+  supportsElectronScan,
+} from '../services/electronScannerService'
 import { enrichSongsArtwork, canShareArtworkByAlbum } from '../services/artworkService'
 import { cacheSongFiles, clearSongBlobCache, removeSongFromCache } from '../services/audioFileService'
 import { clearArtworkUrlCache, revokeArtworkUrl } from '../services/artworkFileService'
 import { usePlayerStore } from './playerStore'
+import { usePlaylistStore } from './playlistStore'
 
 interface LibraryStore {
   songs: Song[]
@@ -20,8 +26,11 @@ interface LibraryStore {
   loadLibrary: () => Promise<void>
   scanFromFiles: (files: File[]) => Promise<void>
   scanFromDirectory: () => Promise<void>
+  scanFromElectronDefaults: () => Promise<void>
+  scanFromElectronFolder: () => Promise<void>
   clearLibrary: () => Promise<void>
   deleteSong: (id: string) => Promise<void>
+  deleteAlbum: (albumId: string) => Promise<void>
   updateSongArtwork: (id: string, artwork: string) => Promise<void>
   updateSongMetadata: (id: string, patch: SongMetadataPatch) => Promise<void>
   toggleFavorite: (id: string) => Promise<void>
@@ -207,6 +216,58 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     }
   },
 
+  scanFromElectronDefaults: async () => {
+    if (!supportsElectronScan()) return
+    set({ isScanning: true, error: null, scanProgress: null })
+    try {
+      const songs = await scanElectronFullDevice((p) => set({ scanProgress: p }))
+      if (songs.length === 0) {
+        set({ error: 'No se encontró música en Escritorio, Documentos, Descargas, Videos, Imágenes ni Música.' })
+        return
+      }
+      const artworkFromScan = new Map(songs.map((s) => [s.id, s.artwork]))
+      await dbService.addSongs(songs)
+      let all = await dbService.getAllSongs()
+      all = all.map((s) => ({ ...s, artwork: s.artwork ?? artworkFromScan.get(s.id) }))
+      set(rebuildLibraryState(all))
+      all = await backfillArtworks(all, (id, artwork) => {
+        void dbService.updateSongArtwork(id, artwork)
+      })
+      set(rebuildLibraryState(all))
+    } catch (e) {
+      const msg = getScanErrorMessage(e)
+      if (msg) set({ error: msg })
+    } finally {
+      set({ isScanning: false, scanProgress: null })
+    }
+  },
+
+  scanFromElectronFolder: async () => {
+    if (!supportsElectronScan()) return
+    set({ isScanning: true, error: null, scanProgress: null })
+    try {
+      const songs = await scanElectronPickedFolder((p) => set({ scanProgress: p }))
+      if (songs.length === 0) {
+        set({ error: null })
+        return
+      }
+      const artworkFromScan = new Map(songs.map((s) => [s.id, s.artwork]))
+      await dbService.addSongs(songs)
+      let all = await dbService.getAllSongs()
+      all = all.map((s) => ({ ...s, artwork: s.artwork ?? artworkFromScan.get(s.id) }))
+      set(rebuildLibraryState(all))
+      all = await backfillArtworks(all, (id, artwork) => {
+        void dbService.updateSongArtwork(id, artwork)
+      })
+      set(rebuildLibraryState(all))
+    } catch (e) {
+      const msg = getScanErrorMessage(e)
+      if (msg) set({ error: msg })
+    } finally {
+      set({ isScanning: false, scanProgress: null })
+    }
+  },
+
   clearLibrary: async () => {
     await dbService.clearSongs()
     clearSongBlobCache()
@@ -220,6 +281,19 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     revokeArtworkUrl(id)
     const songs = await dbService.getAllSongs()
     set(rebuildLibraryState(songs))
+  },
+
+  deleteAlbum: async (albumId) => {
+    const albumSongs = get().getAlbumSongs(albumId)
+    for (const song of albumSongs) {
+      usePlayerStore.getState().onSongRemoved(song.id)
+      await dbService.deleteSong(song.id)
+      removeSongFromCache(song.id)
+      revokeArtworkUrl(song.id)
+    }
+    const songs = await dbService.getAllSongs()
+    set(rebuildLibraryState(songs))
+    await usePlaylistStore.getState().loadPlaylists()
   },
 
   updateSongArtwork: async (id, artwork) => {

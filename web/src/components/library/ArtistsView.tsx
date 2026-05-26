@@ -21,6 +21,12 @@ export function ArtistsView() {
 
   if (selected) {
     const artistSongs = getArtistSongs(selected.id)
+
+    const handleSongDeletedFromArtist = () => {
+      const remaining = useLibraryStore.getState().getArtistSongs(selected.id)
+      if (remaining.length === 0) setSelected(null)
+    }
+
     return (
       <div className="view-panel">
         <div className="scrollable view-scroll" onClick={() => setMenuState(null)}>
@@ -80,6 +86,7 @@ export function ArtistsView() {
                   open={menuState?.songId === song.id}
                   anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
                   onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
+                  onAfterDelete={handleSongDeletedFromArtist}
                 />
               </div>
             ))}

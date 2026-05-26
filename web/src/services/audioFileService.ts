@@ -1,5 +1,6 @@
 import type { Song } from '../types'
 import { dbService } from './dbService'
+import { getElectronLocalFileUrl } from './electronBridgeService'
 
 const blobCache = new Map<string, Blob>()
 
@@ -19,6 +20,18 @@ export async function resolveSongBlob(song: Song): Promise<Blob | null> {
 
   const cached = blobCache.get(song.id)
   if (cached) return cached
+
+  if (song.filePath && song.filePath.startsWith('/')) {
+    const url = await getElectronLocalFileUrl(song.filePath)
+    if (url) {
+      const response = await fetch(url)
+      if (response.ok) {
+        const blob = await response.blob()
+        blobCache.set(song.id, blob)
+        return blob
+      }
+    }
+  }
 
   const blob = await dbService.getSongBlob(song.id)
   if (blob) {

@@ -11,9 +11,10 @@ import { formatDuration } from '../../services/scannerService'
 import type { Playlist } from '../../types'
 
 export function PlaylistsView() {
-  const { playlists, createPlaylist, deletePlaylist, setActivePlaylist, activePlaylistId } = usePlaylistStore()
+  const { playlists, createPlaylist, deletePlaylist } = usePlaylistStore()
   const { songs } = useLibraryStore()
   const { playSong } = usePlayerStore()
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null)
@@ -21,20 +22,20 @@ export function PlaylistsView() {
 
   const songMap = new Map(songs.map((s) => [s.id, s]))
 
-  const activePlaylist = playlists.find((p) => p.id === activePlaylistId)
+  const activePlaylist = playlists.find((p) => p.id === selectedPlaylistId)
 
   async function handleCreate() {
     if (!newName.trim()) return
     const pl = await createPlaylist(newName.trim())
     setNewName('')
     setCreating(false)
-    setActivePlaylist(pl.id)
+    setSelectedPlaylistId(pl.id)
   }
 
   async function handleConfirmDeletePlaylist() {
     if (!playlistToDelete) return
     await deletePlaylist(playlistToDelete.id)
-    if (activePlaylistId === playlistToDelete.id) setActivePlaylist(null)
+    if (selectedPlaylistId === playlistToDelete.id) setSelectedPlaylistId(null)
     setPlaylistToDelete(null)
   }
 
@@ -57,7 +58,7 @@ export function PlaylistsView() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {deletePlaylistDialog}
         <div style={{ padding: '20px 28px 16px', flexShrink: 0 }}>
-          <button onClick={() => setActivePlaylist(null)} style={{ color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, marginBottom: 16 }}>
+          <button onClick={() => setSelectedPlaylistId(null)} style={{ color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, marginBottom: 16 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             Playlists
           </button>
@@ -179,7 +180,7 @@ export function PlaylistsView() {
                   playlist={pl}
                   songs={plSongs}
                   count={pl.songIds.length}
-                  onClick={() => setActivePlaylist(pl.id)}
+                  onClick={() => setSelectedPlaylistId(pl.id)}
                   onDelete={() => setPlaylistToDelete(pl)}
                 />
               )

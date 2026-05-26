@@ -11,9 +11,10 @@ import { AppIcon } from '../ui/AppIcon'
 import { FavoriteButton } from '../ui/FavoriteButton'
 import { HorizontalScroller, HorizontalSongCard } from '../ui/HorizontalScroller'
 import { APP_NAME } from '../../constants/appBranding'
-import { isNativeApp } from '../../utils/platform'
+import { showDownloadButtons } from '../../utils/platform'
 import { DownloadAppButtons } from './DownloadAppButtons'
 import { formatDuration, supportsDirectoryPicker } from '../../services/scannerService'
+import { supportsElectronScan } from '../../services/electronScannerService'
 import type { ViewName } from '../../types'
 
 interface Props {
@@ -38,7 +39,7 @@ export function HomeView({ onNavigate }: Props) {
   const store = useLibraryStore()
   const {
     songs, albums, isScanning, scanProgress, error,
-    scanFromFiles, scanFromDirectory, getAlbumSongs,
+    scanFromFiles, scanFromDirectory, scanFromElectronDefaults, scanFromElectronFolder, getAlbumSongs,
     getFavorites, getMostPlayedThisMonth, getRecentlyPlayed, getRecentlyAdded,
   } = store
   const { playSong } = usePlayerStore()
@@ -52,12 +53,43 @@ export function HomeView({ onNavigate }: Props) {
   const recentlyPlayed = getRecentlyPlayed()
   const recentlyAdded = getRecentlyAdded()
   const hasFsPicker = supportsDirectoryPicker()
+  const hasElectronScan = supportsElectronScan()
+
+  const handleScanMusic = () => {
+    if (hasElectronScan) {
+      void scanFromElectronDefaults()
+      return
+    }
+    if (hasFsPicker) {
+      void scanFromDirectory()
+      return
+    }
+    dirInputRef.current?.click()
+  }
+
+  const handlePickFolder = () => {
+    if (hasElectronScan) {
+      void scanFromElectronFolder()
+      return
+    }
+    dirInputRef.current?.click()
+  }
 
   const progressPct = scanProgress
     ? scanProgress.phase === 'discovering'
-      ? Math.min(95, scanProgress.total > 0 ? 30 + (scanProgress.total % 50) : 10)
+      ? scanProgress.foldersScanned != null
+        ? Math.min(92, 8 + (scanProgress.foldersScanned % 120))
+        : Math.min(95, scanProgress.total > 0 ? 30 + (scanProgress.total % 50) : 10)
       : Math.round((scanProgress.processed / Math.max(scanProgress.total, 1)) * 100)
     : 0
+
+  const progressLabel = scanProgress
+    ? scanProgress.phase === 'discovering'
+      ? scanProgress.foldersScanned != null
+        ? `${scanProgress.current}${scanProgress.total ? ` · ${scanProgress.total} archivos` : ''}`
+        : scanProgress.current
+      : `Procesando ${scanProgress.processed}/${scanProgress.total}: ${scanProgress.current}`
+    : ''
 
   return (
     <div className="scrollable mobile-page" style={{ flex: 1, padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -76,7 +108,7 @@ export function HomeView({ onNavigate }: Props) {
           </p>
         </div>
         <div className="home-header-aside">
-          {!isNativeApp && <DownloadAppButtons />}
+          {showDownloadButtons && <DownloadAppButtons />}
           <button
             type="button"
             onClick={() => onNavigate('search')}
@@ -90,13 +122,13 @@ export function HomeView({ onNavigate }: Props) {
 
       {/* Scan */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button type="button" onClick={() => hasFsPicker ? scanFromDirectory() : dirInputRef.current?.click()} disabled={isScanning}
+        <button type="button" onClick={handleScanMusic} disabled={isScanning}
           style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: isScanning ? 0.6 : 1 }}>
-          Escanear música
+          {hasElectronScan ? 'Escanear dispositivo' : 'Escanear música'}
         </button>
-        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isScanning}
+        <button type="button" onClick={hasElectronScan ? handlePickFolder : () => fileInputRef.current?.click()} disabled={isScanning}
           style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: 13, cursor: 'pointer' }}>
-          Agregar archivos
+          {hasElectronScan ? 'Elegir carpeta…' : 'Agregar archivos'}
         </button>
         {songs.length > 0 && (
           <button type="button" onClick={() => setClearStep(1)} style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -112,6 +144,9 @@ export function HomeView({ onNavigate }: Props) {
       {error && !isScanning && <div style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(255,32,32,0.1)', color: 'var(--accent)', fontSize: 13 }}>{error}</div>}
       {isScanning && (
         <div style={{ padding: 14, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {progressLabel}
+          </p>
           <div style={{ height: 4, background: 'var(--bg-surface3)', borderRadius: 2 }}>
             <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.2s' }} />
           </div>
@@ -231,7 +266,22 @@ export function HomeView({ onNavigate }: Props) {
                   const albumSongs = getAlbumSongs(album.id)
                   return (
                     <div key={album.id} onClick={() => onNavigate('albums')} style={{ cursor: 'pointer' }}>
-                      <AlbumCoverArt artwork={album.artwork} title={album.title} artist={album.artist} album={album.title} size={120} borderRadius={10} menuSong={albumSongs[0] ?? null} style={{ width: '100%', aspectRatio: '1' }} />
+                      <AlbumCoverArt
+                        artwork={album.artwork}
+                        title={album.title}
+                        artist={album.artist}
+                        album={album.title}
+                        size={120}
+                        borderRadius={10}
+                        menuSong={albumSongs[0] ?? null}
+                        albumMenu={{
+                          id: album.id,
+                          title: album.title,
+                          artist: album.artist,
+                          songIds: albumSongs.map((s) => s.id),
+                        }}
+                        style={{ width: '100%', aspectRatio: '1' }}
+                      />
                       <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.title}</div>
                     </div>
                   )

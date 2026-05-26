@@ -238,10 +238,6 @@ export function FullPlayer() {
               </IconButton>
             </div>
 
-            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
-              Desliza ← → para cambiar · Toca la carátula para pausar
-            </p>
-
             <div style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '0 40px' }}>
               <VolumeFader volume={volume} isMuted={isMuted} onVolumeChange={setVolume} onToggleMute={toggleMute} width="100%" />
             </div>

@@ -8,21 +8,25 @@ Repositorio: https://github.com/RUGDRAIGER/rugdraiger_play
 Este archivo describe SOLO:
   A) La aplicación WEB (referencia de diseño y funcionalidad)
   B) La aplicación ANDROID NATIVA Flutter (última versión publicada)
+  C) Aplicaciones de ESCRITORIO (Windows, macOS)
 
 NO usar Capacitor/WebView como app principal. El APK publicado es Flutter nativo.
+Las apps de escritorio Windows/macOS usan Electron (UI web) o Flutter nativo si Xcode está disponible.
 
 --- REGLA DE TRABAJO (OBLIGATORIA PARA TODA MODIFICACIÓN) ---
 
   Aplica siempre este ciclo antes de dar por terminado cualquier cambio:
 
     1. Implementar la función o corrección solicitada
-    2. Probar en local (flutter test, flutter analyze, emulador/dispositivo si aplica)
+    2. Probar en local (flutter test, npm run build, abrir app si aplica)
     3. Corregir errores detectados
     4. Volver a probar hasta que todo funcione
     5. Publicar en GitHub Pages solo cuando esté verificado:
          APK → https://rugdraiger.github.io/rugdraiger_play/apk/rugdraiger-play.apk
+         Windows → raw/gh-pages/windows/RugdraigerPlay-Windows.zip
+         macOS → raw/gh-pages/macos/RugdraigerPlay-macOS.zip
          Web → https://rugdraiger.github.io/rugdraiger_play/
-         Deploy: ./scripts/build-apk.sh (APK) + ./scripts/deploy-pwa.sh (sitio)
+         Deploy: ./scripts/build-apk.sh + ./scripts/deploy-pwa.sh
 
   No subir cambios sin completar pruebas. Documentar cambios en este archivo.
 
@@ -279,6 +283,8 @@ A) PÁGINA WEB — Rugdraiger Play
   APK_DOWNLOAD_URL: {base}apk/rugdraiger-play.apk
   WINDOWS_DOWNLOAD_URL: GitHub raw gh-pages/windows/RugdraigerPlay-Windows.zip
     (LFS; Pages no sirve el binario — el botón usa URL raw de GitHub)
+  MACOS_DOWNLOAD_URL: GitHub raw gh-pages/macos/RugdraigerPlay-macOS.zip
+    (LFS ~289 MB; URL raw de GitHub)
 
 --- Cambios recientes WEB (24 mayo 2026) — RESUMEN ---
 
@@ -741,6 +747,49 @@ B) APP ANDROID NATIVA — Flutter (última versión)
   La app FLUTTER debe seguir evolucionando hacia paridad 1:1 con la web,
   manteniendo ventajas nativas (MediaStore, background playback, notificaciones).
   NO reemplazar Flutter por Capacitor/WebView.
+
+
+================================================================================
+C) APLICACIONES DE ESCRITORIO — Windows y macOS
+================================================================================
+
+--- Windows (carpeta exe/) ---
+
+  ZIP: https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/windows/RugdraigerPlay-Windows.zip
+  Build: exe/desktop-shell → electron-packager win32
+  UI: misma PWA (Electron)
+
+--- macOS (carpeta macos/) ---
+
+  ZIP: https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/macos/RugdraigerPlay-macOS.zip
+  Build: macos/build-macos.sh
+    - Preferencia: Flutter nativo (requiere Xcode completo)
+    - Fallback: Electron (macos/desktop-shell) — misma UI web/APK
+  Instalación: macos/COMO-INSTALAR-EN-MAC.txt
+  Contenido ZIP: Rugdraiger Play.app (~289 MB Electron arm64)
+  Botón descarga en web: DownloadAppButtons + drawer móvil (macOS)
+
+  Mejoras macOS (25 mayo 2026):
+    - Icono correcto (app-icon.icns de la marca)
+    - Sin botones Windows/APK dentro de la app de escritorio
+    - Escaneo nativo con autorización previa en 6 carpetas:
+      Escritorio, Documentos, Descargas, Videos, Imágenes y Música
+      (automático al abrir si la biblioteca está vacía)
+    - Más formatos: mp3, flac, m4a, ogg, wav, aac, alac, aiff, wv, ape, etc.
+    - Notch flotante: controles play/pausa/skip con carátula cuando la ventana
+      está minimizada o en segundo plano (Mac con notch / panel superior)
+
+  Archivos:
+    macos/build-macos.sh
+    macos/desktop-shell/ (Electron wrapper)
+    macos/README.md
+    web/public/macos/RugdraigerPlay-macOS.zip (copia para deploy)
+
+  Deploy gh-pages: Git LFS para macos/*.zip (igual que windows/*.zip)
+
+--- Última actualización macOS: 25 mayo 2026 ---
+
+  Creada carpeta macos/ con app de escritorio y enlace de descarga en GitHub Pages.
 
 
 ================================================================================

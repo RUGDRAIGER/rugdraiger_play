@@ -1,4 +1,11 @@
 import type { Song, ScanProgress } from '../types'
+import {
+  AUDIO_EXTENSION_SET,
+  LOSSLESS_FORMATS,
+} from '../constants/audioFormats'
+import { getElectronPathFromFile, generateSongIdForFile } from './electronPathUtils'
+import type { ElectronLocalFileEntry } from '../types/electron'
+import { getAudioMimeType } from '../constants/audioFormats'
 
 interface JsMediaTags {
   read: (file: File, callbacks: {
@@ -12,15 +19,17 @@ function getJsmediatags(): JsMediaTags | null {
   return lib ?? null
 }
 
-const AUDIO_EXTENSIONS = ['mp3', 'flac', 'aac', 'm4a', 'ogg', 'wav', 'opus', 'wma', 'aiff', 'alac']
-const LOSSLESS_FORMATS = ['flac', 'wav', 'aiff', 'alac']
+const AUDIO_EXTENSIONS = Array.from(AUDIO_EXTENSION_SET)
 
-// Carpetas del sistema que se omiten en escaneos profundos (p. ej. disco C:)
+// Carpetas del sistema que se omiten en escaneos profundos
 const SKIP_DIR_NAMES = new Set([
   'windows', 'program files', 'program files (x86)', 'programdata',
-  '$recycle.bin', 'system volume information', 'recovery', 'appdata',
-  'node_modules', '.git', '.Trash', 'library', 'applications',
-  'private', 'dev', 'proc', 'sys', 'tmp', 'temp', 'cache',
+  '$recycle.bin', 'system volume information', 'recovery',
+  'node_modules', '.git', '.trash', '.trashes',
+  'applications', 'system', 'private', 'dev', 'proc', 'sys',
+  'tmp', 'temp', 'cache', 'caches', 'logs',
+  '.spotlight-v100', '.fseventsd', '.documentrevisions-v100',
+  'photos library.photoslibrary', 'photolibary', 'mail', 'containers',
 ])
 
 interface CollectState {
@@ -32,9 +41,9 @@ interface CollectState {
 type DirHandle = any
 
 function generateId(file: File): string {
-  return `${file.name}-${file.size}-${file.lastModified}`
-    .replace(/[^a-zA-Z0-9]/g, '_')
-    .substring(0, 64)
+  const electronPath = getElectronPathFromFile(file)
+  if (electronPath) return generateSongIdForFile(file, electronPath)
+  return generateSongIdForFile(file)
 }
 
 function getExtension(filename: string): string {
@@ -42,7 +51,10 @@ function getExtension(filename: string): string {
 }
 
 function isAudioFile(file: File): boolean {
-  return AUDIO_EXTENSIONS.includes(getExtension(file.name))
+  const ext = getExtension(file.name)
+  if (AUDIO_EXTENSION_SET.has(ext)) return true
+  if (file.type.startsWith('audio/')) return true
+  return false
 }
 
 function shouldSkipDirectory(name: string): boolean {
@@ -361,6 +373,7 @@ export async function scanFiles(
     const [tags, duration] = await Promise.all([readTagsFromFile(file), getAudioDuration(file)])
     const { title, artist, album, trackNumber, year } = resolveSongMetadata(file, tags)
 
+    const electronPath = getElectronPathFromFile(file)
     songs.push({
       id: generateId(file),
       title,
@@ -382,7 +395,7 @@ export async function scanFiles(
       lyrics: tags.lyrics || '',
       artwork: tags.picture,
       file,
-      filePath: (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name,
+      filePath: electronPath || (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name,
     })
   }
 
@@ -488,6 +501,121 @@ export async function scanDirectory(
   })
 
   return files
+}
+
+function getExtensionFromName(filename: string): string {
+  return filename.split('.').pop()?.toLowerCase() ?? ''
+}
+
+async function getAudioDurationFromUrl(fileUrl: string): Promise<number> {
+  return new Promise((resolve) => {
+    const audio = new Audio()
+    const cleanup = () => {
+      audio.removeEventListener('loadedmetadata', onReady)
+      audio.removeEventListener('error', onError)
+    }
+    const onReady = () => {
+      cleanup()
+      resolve(Math.round(audio.duration * 1000))
+    }
+    const onError = () => {
+      cleanup()
+      resolve(0)
+    }
+    audio.addEventListener('loadedmetadata', onReady)
+    audio.addEventListener('error', onError)
+    audio.src = fileUrl
+  })
+}
+
+/** Procesa entradas del escaneo nativo (solo metadatos; reproducción por ruta local). */
+export async function scanElectronEntries(
+  entries: ElectronLocalFileEntry[],
+  onProgress?: (p: ScanProgress) => void,
+): Promise<Song[]> {
+  const api = window.electronAPI
+  if (!api) return []
+
+  const songs: Song[] = []
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]
+    onProgress?.({
+      total: entries.length,
+      processed: i,
+      current: entry.name,
+      phase: 'processing',
+    })
+
+    const ext = getExtensionFromName(entry.name)
+    let tags: Awaited<ReturnType<typeof readTagsFromFile>> = {}
+    let duration = 0
+
+    try {
+      const fileUrl = await api.getLocalFileUrl(entry.path)
+      duration = await getAudioDurationFromUrl(fileUrl)
+
+      const buffer = await api.readLocalFile(entry.path)
+      const pseudoFile = new File([buffer], entry.name, {
+        type: getAudioMimeType(ext),
+        lastModified: entry.mtime,
+      })
+      Object.defineProperty(pseudoFile, 'webkitRelativePath', {
+        value: entry.path,
+        configurable: true,
+      })
+      tags = await readTagsFromFile(pseudoFile)
+    } catch {
+      // Sin permiso o formato ilegible — usar metadatos mínimos desde la ruta
+    }
+
+    const pseudoForMeta = { name: entry.name } as File
+    Object.defineProperty(pseudoForMeta, 'webkitRelativePath', {
+      value: entry.path,
+      configurable: true,
+    })
+    const inferred = inferMetadataFromPath(pseudoForMeta)
+    const { title, artist, album, trackNumber, year } = resolveSongMetadata(
+      pseudoForMeta,
+      { ...tags, ...inferred },
+    )
+
+    songs.push({
+      id: generateSongIdForFile(pseudoForMeta, entry.path),
+      title,
+      artist,
+      album,
+      genre: tags.genre || '',
+      duration,
+      fileSize: entry.size,
+      trackNumber,
+      format: ext,
+      isLossless: LOSSLESS_FORMATS.includes(ext),
+      dateAdded: Date.now(),
+      year,
+      composer: tags.composer || '',
+      isFavorite: false,
+      playCount: 0,
+      lastPlayed: 0,
+      replayGain: tags.replayGain ?? null,
+      lyrics: tags.lyrics || '',
+      artwork: tags.picture,
+      filePath: entry.path,
+    })
+
+    if (i > 0 && i % 8 === 0) {
+      await new Promise((r) => setTimeout(r, 0))
+    }
+  }
+
+  onProgress?.({
+    total: entries.length,
+    processed: entries.length,
+    current: '',
+    phase: 'processing',
+  })
+
+  return songs
 }
 
 export function formatDuration(ms: number): string {

@@ -1,0 +1,52 @@
+RUGDRAIGER PLAY — Instalación en macOS
+========================================
+
+1. Descarga RugdraigerPlay-macOS.zip desde la página de GitHub.
+
+2. Descomprime el ZIP (doble clic).
+
+3. Arrastra "Rugdraiger Play.app" a la carpeta Aplicaciones (opcional).
+
+4. Primera apertura (app no firmada por Apple):
+
+   Si macOS dice: "Rugdraiger Play.app está dañado y no se puede abrir"
+   → NO lo tires a la Papelera. La app NO está rota; macOS bloquea descargas
+     de internet sin certificado de desarrollador (Gatekeeper).
+
+   Solución A — Terminal (recomendada):
+     Abre Terminal y ejecuta (ajusta la ruta si la app está en otra carpeta):
+
+     xattr -cr "/Applications/Rugdraiger Play.app"
+
+     Si aún no la moviste a Aplicaciones:
+     xattr -cr ~/Downloads/RugdraigerPlay-macOS/Rugdraiger\ Play.app
+
+     Luego abre la app con doble clic.
+
+   Solución B — Clic derecho:
+     Clic derecho en "Rugdraiger Play.app" → Abrir → Confirmar "Abrir"
+
+   Solución C — Ajustes del Sistema:
+     Ajustes del Sistema → Privacidad y seguridad → "Abrir de todas formas"
+
+5. Escaneo automático de música:
+
+   Al abrir la app (o al pulsar "Escanear dispositivo"), macOS pedirá
+   autorización para buscar música. Se escanean automáticamente:
+
+     • Escritorio
+     • Documentos
+     • Descargas
+     • Videos
+     • Imágenes
+     • Música
+
+   También puedes usar "Elegir carpeta…" para añadir otra ubicación.
+
+   Si faltan archivos: Ajustes → Privacidad y seguridad → Acceso total al disco
+   → activar Rugdraiger Play.
+
+Requisitos: macOS 11 (Big Sur) o superior, Apple Silicon o Intel.
+
+Compilar desde el código:
+  cd macos && chmod +x build-macos.sh && ./build-macos.sh

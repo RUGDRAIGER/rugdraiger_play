@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom'
+
 interface Props {
   open: boolean
   title: string
@@ -21,18 +23,20 @@ export function ConfirmDialog({
 }: Props) {
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
+      role="dialog"
+      aria-modal="true"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 2000,
+        zIndex: 10000,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
-        background: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(4px)',
+        background: 'rgba(0, 0, 0, 0.72)',
+        backdropFilter: 'blur(6px)',
       }}
       onClick={onCancel}
     >
@@ -45,7 +49,7 @@ export function ConfirmDialog({
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
           padding: '24px',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -55,6 +59,7 @@ export function ConfirmDialog({
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
           <button
+            type="button"
             onClick={onCancel}
             style={{
               padding: '10px 18px',
@@ -69,6 +74,7 @@ export function ConfirmDialog({
             {cancelLabel}
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             style={{
               padding: '10px 18px',
@@ -85,6 +91,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

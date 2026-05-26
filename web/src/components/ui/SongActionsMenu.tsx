@@ -12,11 +12,21 @@ export interface MenuAnchorPoint {
   y: number
 }
 
+export interface AlbumMenuInfo {
+  id: string
+  title: string
+  artist: string
+  songIds: string[]
+}
+
 interface Props {
   song: Song
   variant?: 'inline' | 'overlay'
   playlistId?: string
+  menuContext?: 'song' | 'album'
+  albumInfo?: AlbumMenuInfo
   onAction?: () => void
+  onAfterDelete?: () => void
   open?: boolean
   onOpenChange?: (open: boolean) => void
   anchorPoint?: MenuAnchorPoint | null
@@ -55,7 +65,10 @@ export function SongActionsMenu({
   song,
   variant = 'inline',
   playlistId,
+  menuContext = 'song',
+  albumInfo,
   onAction,
+  onAfterDelete,
   open,
   onOpenChange,
   anchorPoint,
@@ -72,6 +85,8 @@ export function SongActionsMenu({
   const ref = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
+  const isAlbumContext = menuContext === 'album' && !!albumInfo
+
   const setMenuOpen = (value: boolean) => {
     if (!value) setUsePointerAnchor(false)
     if (isControlled) onOpenChange?.(value)
@@ -82,7 +97,7 @@ export function SongActionsMenu({
     if (isControlled && open) setInternalOpen(false)
   }, [isControlled, open])
 
-  const { deleteSong, toggleFavorite } = useLibraryStore()
+  const { deleteSong, deleteAlbum, toggleFavorite } = useLibraryStore()
   const { addToQueue, onSongRemoved } = usePlayerStore()
   const { playlists, addSongToPlaylist, removeSongFromPlaylist, loadPlaylists } = usePlaylistStore()
 
@@ -138,11 +153,16 @@ export function SongActionsMenu({
   }
 
   async function handleDelete() {
-    await deleteSong(song.id)
-    onSongRemoved(song.id)
+    if (isAlbumContext && albumInfo) {
+      await deleteAlbum(albumInfo.id)
+    } else {
+      await deleteSong(song.id)
+      onSongRemoved(song.id)
+    }
     await loadPlaylists()
     setConfirmDelete(false)
     closeMenu()
+    onAfterDelete?.()
   }
 
   async function handleRemoveFromPlaylist() {
@@ -150,10 +170,17 @@ export function SongActionsMenu({
     await removeSongFromPlaylist(playlistId, song.id)
     setConfirmRemove(false)
     closeMenu()
+    onAfterDelete?.()
   }
 
   const isOverlay = variant === 'overlay'
   const btnSize = isOverlay ? 26 : 28
+
+  const deleteLabel = isAlbumContext ? 'Eliminar álbum' : 'Eliminar canción'
+  const deleteTitle = isAlbumContext ? 'Eliminar álbum' : 'Eliminar canción'
+  const deleteMessage = isAlbumContext
+    ? `¿Eliminar el álbum "${albumInfo!.title}" de ${albumInfo!.artist}? Se quitarán ${albumInfo!.songIds.length} canciones de la biblioteca. Esta acción no se puede deshacer.`
+    : `¿Eliminar "${song.title}" de la biblioteca? Esta acción no se puede deshacer.`
 
   const menuPanel = isOpen ? (
     <div
@@ -162,7 +189,7 @@ export function SongActionsMenu({
         position: 'fixed',
         top: menuPos.top,
         left: menuPos.left,
-        zIndex: 5000,
+        zIndex: 9000,
         width: MENU_WIDTH,
         maxWidth: 'calc(100vw - 16px)',
         background: 'var(--bg-surface2)',
@@ -207,26 +234,30 @@ export function SongActionsMenu({
         </div>
       )}
       <div style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 4 }}>
-        <button type="button" onClick={async () => { await toggleFavorite(song.id); closeMenu() }}
-          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6, color: song.isFavorite ? 'var(--accent)' : undefined }}>
-          {song.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-        </button>
-        <button type="button" onClick={() => { setMenuOpen(false); setEditMetadata(true) }}
-          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
-          Editar metadatos
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            addToQueue(song)
-            closeMenu()
-          }}
-          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-        >
-          Agregar a la cola
-        </button>
+        {!isAlbumContext && (
+          <>
+            <button type="button" onClick={async () => { await toggleFavorite(song.id); closeMenu() }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6, color: song.isFavorite ? 'var(--accent)' : undefined }}>
+              {song.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+            </button>
+            <button type="button" onClick={() => { setMenuOpen(false); setEditMetadata(true) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}>
+              Editar metadatos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                addToQueue(song)
+                closeMenu()
+              }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderRadius: 6 }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+            >
+              Agregar a la cola
+            </button>
+          </>
+        )}
         {playlistId && (
           <button
             type="button"
@@ -251,7 +282,7 @@ export function SongActionsMenu({
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,32,32,0.1)' }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
         >
-          Eliminar canción
+          {deleteLabel}
         </button>
       </div>
     </div>
@@ -261,8 +292,8 @@ export function SongActionsMenu({
     <>
       <ConfirmDialog
         open={confirmDelete}
-        title="Eliminar canción"
-        message={`¿Eliminar "${song.title}" de la biblioteca? Esta acción no se puede deshacer.`}
+        title={deleteTitle}
+        message={deleteMessage}
         confirmLabel="Eliminar"
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
@@ -276,7 +307,9 @@ export function SongActionsMenu({
         onCancel={() => setConfirmRemove(false)}
       />
 
-      <MetadataEditor song={song} open={editMetadata} onClose={() => setEditMetadata(false)} />
+      {!isAlbumContext && (
+        <MetadataEditor song={song} open={editMetadata} onClose={() => setEditMetadata(false)} />
+      )}
 
       <div
         ref={ref}
@@ -292,7 +325,7 @@ export function SongActionsMenu({
         <button
           ref={buttonRef}
           type="button"
-          aria-label="Opciones de canción"
+          aria-label={isAlbumContext ? 'Opciones de álbum' : 'Opciones de canción'}
           title="Opciones"
           onClick={(e) => {
             e.stopPropagation()

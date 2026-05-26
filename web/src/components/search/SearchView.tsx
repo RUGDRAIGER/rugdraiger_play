@@ -79,7 +79,13 @@ export function SearchView() {
                       </div>
                     </div>
                     <FavoriteButton song={song} size={16} />
-                    <SongActionsMenu song={song} open={menuState?.songId === song.id} anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null} onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)} />
+                    <SongActionsMenu
+                      song={song}
+                      open={menuState?.songId === song.id}
+                      anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
+                      onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
+                      onAfterDelete={() => setMenuState(null)}
+                    />
                   </div>
                 ))}
               </section>
@@ -120,7 +126,22 @@ export function SearchView() {
                     const albumSongs = getAlbumSongs(album.id)
                     return (
                       <div key={album.id}>
-                        <AlbumCoverArt artwork={album.artwork} title={album.title} artist={album.artist} album={album.title} size={120} borderRadius={8} menuSong={albumSongs[0] ?? null} style={{ width: '100%', aspectRatio: '1' }} />
+                        <AlbumCoverArt
+                          artwork={album.artwork}
+                          title={album.title}
+                          artist={album.artist}
+                          album={album.title}
+                          size={120}
+                          borderRadius={8}
+                          menuSong={albumSongs[0] ?? null}
+                          albumMenu={{
+                            id: album.id,
+                            title: album.title,
+                            artist: album.artist,
+                            songIds: albumSongs.map((s) => s.id),
+                          }}
+                          style={{ width: '100%', aspectRatio: '1' }}
+                        />
                         <div style={{ fontSize: 12, fontWeight: 600, marginTop: 4 }}>{album.title}</div>
                       </div>
                     )
