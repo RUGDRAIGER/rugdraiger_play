@@ -19,6 +19,7 @@ interface PlayerStore {
   shuffledQueue: Song[]
   isFullPlayerOpen: boolean
   playbackError: string | null
+  stopAfterSongIds: string[]
 
   playSong: (song: Song, queue?: Song[]) => void
   playQueue: (songs: Song[], startIndex?: number) => void
@@ -37,6 +38,9 @@ interface PlayerStore {
   removeFromQueue: (index: number) => void
   onSongRemoved: (songId: string) => void
   getNextSong: () => Song | null
+  getPrevSong: () => Song | null
+  toggleStopAfterSong: (songId: string) => void
+  onTrackEnded: () => void
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -95,6 +99,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   shuffledQueue: [],
   isFullPlayerOpen: false,
   playbackError: null,
+  stopAfterSongIds: [],
 
   playSong: async (song, queue) => {
     const q = queue ?? [song]
@@ -221,8 +226,9 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   },
 
   onSongRemoved: (songId) => {
-    const { currentSong, queue, queueIndex } = get()
+    const { currentSong, queue, queueIndex, stopAfterSongIds } = get()
     const newQueue = queue.filter((s) => s.id !== songId)
+    const cleanedStop = stopAfterSongIds.filter((id) => id !== songId)
     if (currentSong?.id === songId) {
       audioService.pause()
       set({
@@ -232,11 +238,12 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         isPlaying: false,
         progress: 0,
         isFullPlayerOpen: false,
+        stopAfterSongIds: cleanedStop,
       })
       return
     }
     const idx = newQueue.findIndex((s) => s.id === currentSong?.id)
-    set({ queue: newQueue, queueIndex: idx >= 0 ? idx : 0 })
+    set({ queue: newQueue, queueIndex: idx >= 0 ? idx : 0, stopAfterSongIds: cleanedStop })
   },
 
   getNextSong: () => {
@@ -248,5 +255,35 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       else return null
     }
     return activeQueue[nextIdx] ?? null
+  },
+
+  getPrevSong: () => {
+    const { queue, queueIndex, isShuffled, shuffledQueue } = get()
+    const activeQueue = isShuffled && shuffledQueue.length ? shuffledQueue : queue
+    const prevIdx = queueIndex - 1
+    if (prevIdx < 0) return null
+    return activeQueue[prevIdx] ?? null
+  },
+
+  toggleStopAfterSong: (songId) => {
+    const { stopAfterSongIds } = get()
+    if (stopAfterSongIds.includes(songId)) {
+      set({ stopAfterSongIds: stopAfterSongIds.filter((id) => id !== songId) })
+    } else {
+      set({ stopAfterSongIds: [...stopAfterSongIds, songId] })
+    }
+  },
+
+  onTrackEnded: async () => {
+    const { currentSong, stopAfterSongIds } = get()
+    if (currentSong && stopAfterSongIds.includes(currentSong.id)) {
+      audioService.pause()
+      set({
+        isPlaying: false,
+        stopAfterSongIds: stopAfterSongIds.filter((id) => id !== currentSong.id),
+      })
+      return
+    }
+    await get().next()
   },
 }))

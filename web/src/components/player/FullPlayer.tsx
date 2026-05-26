@@ -11,7 +11,23 @@ import { useSwipeGestures } from '../../hooks/useSwipeGestures'
 import { ArtworkDisplay } from '../ui/ArtworkDisplay'
 import { FavoriteButton } from '../ui/FavoriteButton'
 import { IconButton } from '../ui/IconButton'
+import { StopAfterHandButton } from '../ui/StopAfterHandButton'
 import { VolumeFader } from '../ui/VolumeFader'
+import type { Song } from '../../types'
+
+function NeighborTrackPreview({ song }: { song: Song }) {
+  return (
+    <div
+      className="player-neighbor"
+      aria-hidden
+    >
+      <div className="player-neighbor-art">
+        <ArtworkDisplay song={song} size={72} borderRadius={8} style={{ width: '100%', height: '100%' }} />
+      </div>
+      <div className="player-neighbor-title">{song.title}</div>
+    </div>
+  )
+}
 
 export function FullPlayer() {
   const {
@@ -26,7 +42,7 @@ export function FullPlayer() {
   const [blurArtwork, setBlurArtwork] = useState<string | undefined>()
   const [accentColor, setAccentColor] = useState<string | undefined>()
   const lyricsRef = useRef<HTMLDivElement>(null)
-  const { queue, queueIndex } = usePlayerStore()
+  const { queue, queueIndex, getPrevSong, getNextSong } = usePlayerStore()
   const dynamicColors = useSettingsStore((s) => s.dynamicColors)
   const showLyricsSetting = useSettingsStore((s) => s.showLyrics)
 
@@ -77,6 +93,8 @@ export function FullPlayer() {
 
   const pct = duration > 0 ? (progress / duration) * 100 : 0
   const accent = accentColor ?? 'var(--accent)'
+  const prevSong = getPrevSong()
+  const nextSong = getNextSong()
 
   return (
     <div
@@ -132,6 +150,7 @@ export function FullPlayer() {
                   padding: '10px 12px', borderRadius: 'var(--radius-md)',
                   background: i === queueIndex ? 'rgba(255,32,32,0.1)' : 'transparent',
                   cursor: 'pointer', marginBottom: 2,
+                  position: 'relative',
                 }}
               >
                 <ArtworkDisplay song={song} size={38} borderRadius={4} />
@@ -144,6 +163,7 @@ export function FullPlayer() {
                   </div>
                 </div>
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{formatDuration(song.duration)}</span>
+                <StopAfterHandButton songId={song.id} size={18} />
               </div>
             ))}
           </div>
@@ -180,18 +200,22 @@ export function FullPlayer() {
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', touchAction: 'pan-y' }}
               {...swipeHandlers}
             >
-              <div style={{
-                maxWidth: 340, width: '100%', aspectRatio: '1',
-                borderRadius: 'var(--radius-xl)',
-                overflow: 'hidden',
-                boxShadow: `0 24px 80px ${accentColor ? 'var(--dynamic-glow, rgba(0,0,0,0.6))' : 'rgba(0,0,0,0.6)'}`,
-                border: accentColor ? `2px solid ${accent}` : 'none',
-              }}>
-                <ArtworkDisplay song={currentSong} size={340} borderRadius={22} style={{ width: '100%', height: '100%' }} />
+              <div className="player-artwork-row">
+                {prevSong ? <NeighborTrackPreview song={prevSong} /> : <div className="player-neighbor-spacer" />}
+                <div style={{
+                  maxWidth: 340, width: '100%', aspectRatio: '1', flexShrink: 0,
+                  borderRadius: 'var(--radius-xl)',
+                  overflow: 'hidden',
+                  boxShadow: `0 24px 80px ${accentColor ? 'var(--dynamic-glow, rgba(0,0,0,0.6))' : 'rgba(0,0,0,0.6)'}`,
+                  border: accentColor ? `2px solid ${accent}` : 'none',
+                }}>
+                  <ArtworkDisplay song={currentSong} size={340} borderRadius={22} style={{ width: '100%', height: '100%' }} />
+                </div>
+                {nextSong ? <NeighborTrackPreview song={nextSong} /> : <div className="player-neighbor-spacer" />}
               </div>
             </div>
 
-            <div style={{ width: '100%', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <div style={{ width: '100%', textAlign: 'center', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, position: 'relative' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {currentSong.title}
@@ -199,7 +223,10 @@ export function FullPlayer() {
                 <div style={{ fontSize: 16, color: 'var(--text-secondary)' }}>{currentSong.artist}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>{currentSong.album}</div>
               </div>
-              <FavoriteButton song={currentSong} size={26} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <FavoriteButton song={currentSong} size={26} />
+                <StopAfterHandButton songId={currentSong.id} size={20} />
+              </div>
             </div>
 
             <div style={{ width: '100%' }}>

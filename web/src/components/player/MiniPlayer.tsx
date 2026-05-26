@@ -24,7 +24,7 @@ export function MiniPlayer() {
       audioService.maybePreloadGapless(el.currentTime, el.duration, nextSong, gaplessPlayback)
     }
     const onMeta = () => setDuration(el.duration || 0)
-    const onEnd = () => usePlayerStore.getState().next()
+    const onEnd = () => void usePlayerStore.getState().onTrackEnded()
 
     el.addEventListener('timeupdate', onTime)
     el.addEventListener('loadedmetadata', onMeta)

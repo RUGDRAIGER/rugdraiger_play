@@ -1,5 +1,6 @@
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { usePlayerStore } from '../../store/playerStore'
+import { StopAfterHandButton } from './StopAfterHandButton'
 import type { Song } from '../../types'
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
   onContextMenu?: (e: MouseEvent) => void
   className?: string
   style?: CSSProperties
+  showStopHand?: boolean
 }
 
 export function PlayingTrackRow({
@@ -20,6 +22,7 @@ export function PlayingTrackRow({
   onContextMenu,
   className,
   style,
+  showStopHand = true,
 }: Props) {
   const currentSong = usePlayerStore((s) => s.currentSong)
   const progress = usePlayerStore((s) => s.progress)
@@ -39,6 +42,9 @@ export function PlayingTrackRow({
     >
       <div className="track-row-progress" style={{ width: `${pct}%` }} aria-hidden />
       <div className="track-row-inner">{children}</div>
+      {showStopHand && (
+        <StopAfterHandButton songId={song.id} size={16} className="track-row-hand" />
+      )}
     </div>
   )
 }
