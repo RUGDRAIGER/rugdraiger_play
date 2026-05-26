@@ -6,7 +6,51 @@ import { PlayableArtwork } from '../ui/PlayableArtwork'
 import { SongActionsMenu } from '../ui/SongActionsMenu'
 import { openSongMenu, handleSongMenuOpenChange, type SongMenuState } from '../ui/songMenuUtils'
 import { formatDuration } from '../../services/scannerService'
-import type { Album } from '../../types'
+import { PlayingTrackRow, TrackPausedIcon, TrackPlayingIcon, useIsCurrentTrack } from '../ui/PlayingTrackRow'
+import type { Album, Song } from '../../types'
+
+function AlbumTrackRow({
+  song,
+  index,
+  albumSongs,
+  menuState,
+  setMenuState,
+  onDeleted,
+}: {
+  song: Song
+  index: number
+  albumSongs: Song[]
+  menuState: SongMenuState | null
+  setMenuState: (s: SongMenuState | null) => void
+  onDeleted: () => void
+}) {
+  const { playSong } = usePlayerStore()
+  const { isCurrent, isPlaying } = useIsCurrentTrack(song.id)
+
+  return (
+    <PlayingTrackRow
+      song={song}
+      onClick={() => playSong(song, albumSongs)}
+      onContextMenu={(e) => setMenuState(openSongMenu(e, song.id))}
+    >
+      <span style={{ width: 28, textAlign: 'center', fontSize: 12, color: isCurrent ? 'var(--accent)' : 'var(--text-tertiary)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {isCurrent && isPlaying ? <TrackPlayingIcon /> : isCurrent ? <TrackPausedIcon /> : (song.trackNumber || index + 1)}
+      </span>
+      <PlayableArtwork song={song} size={38} borderRadius={4} onPlay={() => playSong(song, albumSongs)} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className={isCurrent ? 'track-row-title' : undefined} style={{ fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+      </div>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>{formatDuration(song.duration)}</span>
+      <SongActionsMenu
+        song={song}
+        open={menuState?.songId === song.id}
+        anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
+        onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
+        onAfterDelete={onDeleted}
+      />
+    </PlayingTrackRow>
+  )
+}
 
 export function AlbumsView() {
   const { albums, getAlbumSongs } = useLibraryStore()
@@ -82,31 +126,15 @@ export function AlbumsView() {
 
           <div className="album-detail-tracks">
             {albumSongs.map((song, i) => (
-              <div
+              <AlbumTrackRow
                 key={song.id}
-                onClick={() => playSong(song, albumSongs)}
-                onContextMenu={(e) => setMenuState(openSongMenu(e, song.id))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
-                  borderBottom: '1px solid var(--border)', cursor: 'pointer',
-                }}
-              >
-                <span style={{ width: 28, textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>
-                  {song.trackNumber || i + 1}
-                </span>
-                <PlayableArtwork song={song} size={38} borderRadius={4} onPlay={() => playSong(song, albumSongs)} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
-                </div>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>{formatDuration(song.duration)}</span>
-                <SongActionsMenu
-                  song={song}
-                  open={menuState?.songId === song.id}
-                  anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
-                  onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
-                  onAfterDelete={handleSongDeletedFromAlbum}
-                />
-              </div>
+                song={song}
+                index={i}
+                albumSongs={albumSongs}
+                menuState={menuState}
+                setMenuState={setMenuState}
+                onDeleted={handleSongDeletedFromAlbum}
+              />
             ))}
           </div>
         </div>

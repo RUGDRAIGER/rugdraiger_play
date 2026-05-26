@@ -8,7 +8,52 @@ import { SongActionsMenu } from '../ui/SongActionsMenu'
 import { openSongMenu, handleSongMenuOpenChange, type SongMenuState } from '../ui/songMenuUtils'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { formatDuration } from '../../services/scannerService'
-import type { Playlist } from '../../types'
+import { PlayingTrackRow, TrackPausedIcon, TrackPlayingIcon, useIsCurrentTrack } from '../ui/PlayingTrackRow'
+import type { Playlist, Song } from '../../types'
+
+function PlaylistTrackRow({
+  song,
+  playlistId,
+  queue,
+  menuState,
+  setMenuState,
+}: {
+  song: Song
+  playlistId: string
+  queue: Song[]
+  menuState: SongMenuState | null
+  setMenuState: (s: SongMenuState | null) => void
+}) {
+  const { playSong } = usePlayerStore()
+  const { isCurrent, isPlaying } = useIsCurrentTrack(song.id)
+
+  return (
+    <PlayingTrackRow
+      song={song}
+      onClick={() => playSong(song, queue)}
+      onDoubleClick={() => playSong(song, queue)}
+      onContextMenu={(e) => setMenuState(openSongMenu(e, song.id))}
+      className="track-row--playlist"
+    >
+      <span style={{ width: 22, textAlign: 'center', fontSize: 12, color: isCurrent ? 'var(--accent)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {isCurrent && isPlaying ? <TrackPlayingIcon size={12} /> : isCurrent ? <TrackPausedIcon size={12} /> : null}
+      </span>
+      <PlayableArtwork song={song} size={38} borderRadius={4} onPlay={() => playSong(song, queue)} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className={isCurrent ? 'track-row-title' : undefined} style={{ fontSize: 13, fontWeight: isCurrent ? 600 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist}</div>
+      </div>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDuration(song.duration)}</span>
+      <SongActionsMenu
+        song={song}
+        playlistId={playlistId}
+        open={menuState?.songId === song.id}
+        anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
+        onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
+      />
+    </PlayingTrackRow>
+  )
+}
 
 export function PlaylistsView() {
   const { playlists, createPlaylist, deletePlaylist } = usePlaylistStore()
@@ -104,26 +149,14 @@ export function PlaylistsView() {
               Agrega canciones desde el menú ⋮ o clic derecho en la lista de canciones
             </div>
           ) : validSongs.map((song) => (
-            <div
+            <PlaylistTrackRow
               key={song.id}
-              onDoubleClick={() => playSong(song, validSongs)}
-              onContextMenu={(e) => setMenuState(openSongMenu(e, song.id))}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-            >
-              <PlayableArtwork song={song} size={38} borderRadius={4} onPlay={() => playSong(song, validSongs)} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist}</div>
-              </div>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDuration(song.duration)}</span>
-              <SongActionsMenu
-                song={song}
-                playlistId={activePlaylist.id}
-                open={menuState?.songId === song.id}
-                anchorPoint={menuState?.songId === song.id ? (menuState.anchor ?? null) : null}
-                onOpenChange={(open) => handleSongMenuOpenChange(open, song.id, setMenuState)}
-              />
-            </div>
+              song={song}
+              playlistId={activePlaylist.id}
+              queue={validSongs}
+              menuState={menuState}
+              setMenuState={setMenuState}
+            />
           ))}
         </div>
       </div>

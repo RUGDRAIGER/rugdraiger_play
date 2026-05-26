@@ -745,3 +745,55 @@ input[type="range"].eq-band:disabled::-webkit-slider-thumb {
   visibility: hidden;
 }
 
+/* Fila de pista con progreso (álbum / playlist) */
+.track-row {
+  position: relative;
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+
+.track-row:not(.track-row--active):hover {
+  background: var(--bg-surface);
+}
+
+.track-row--active {
+  background: rgba(255, 32, 32, 0.06);
+}
+
+.track-row--active .track-row-title {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.track-row-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, rgba(255, 32, 32, 0.2), rgba(255, 32, 32, 0.07));
+  pointer-events: none;
+  z-index: 0;
+  transition: width 0.15s linear;
+}
+
+.track-row-inner {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 0;
+}
+
+.track-row-inner--compact {
+  padding: 8px 0;
+}
+
+.track-row--playlist .track-row-inner {
+  padding: 8px 0;
+}
+
