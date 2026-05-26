@@ -51,7 +51,7 @@ export function DownloadAppButtons() {
           <WindowsIcon />
         </span>
         <span className="home-download-text">
-          <span className="home-download-label">Escritorio Windows</span>
+          <span className="home-download-label">Windows</span>
           <span className="home-download-hint">Descargar app</span>
         </span>
       </a>
