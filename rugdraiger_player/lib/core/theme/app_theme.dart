@@ -10,7 +10,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.dark(
         primary: AppColors.neonRed,
         secondary: AppColors.neonRedLight,
         surface: AppColors.surface,
@@ -25,9 +25,7 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       cardColor: AppColors.surfaceCard,
       dividerColor: AppColors.divider,
-      // Uses system fonts (Roboto on Android, SF Pro on iOS)
 
-      // AppBar
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -41,8 +39,7 @@ class AppTheme {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
 
-      // Bottom Navigation Bar
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.surfaceElevated,
         selectedItemColor: AppColors.neonRed,
         unselectedItemColor: AppColors.textMuted,
@@ -50,18 +47,17 @@ class AppTheme {
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: TextStyle(
+        selectedLabelStyle: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
         ),
-        unselectedLabelStyle: TextStyle(
+        unselectedLabelStyle: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w400,
         ),
       ),
 
-      // Card Theme
       cardTheme: CardThemeData(
         color: AppColors.surfaceCard,
         elevation: 0,
@@ -72,7 +68,6 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
 
-      // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceElevated,
@@ -87,25 +82,22 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.neonRed, width: 1.5),
+          borderSide: BorderSide(color: AppColors.neonRed, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
 
-      // Slider
-      sliderTheme: const SliderThemeData(
+      sliderTheme: SliderThemeData(
         activeTrackColor: AppColors.neonRed,
         inactiveTrackColor: AppColors.progressBackground,
         thumbColor: AppColors.neonRed,
         overlayColor: AppColors.neonRedGlow,
         trackHeight: 3,
-        thumbShape: RoundSliderThumbShape(enabledThumbRadius: 7),
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
       ),
 
-      // Icon Theme
       iconTheme: const IconThemeData(color: AppColors.textSecondary, size: 24),
 
-      // Text Theme
       textTheme: const TextTheme(
         displayLarge: AppTextStyles.displayLarge,
         displayMedium: AppTextStyles.displayMedium,
@@ -119,7 +111,6 @@ class AppTheme {
         labelSmall: AppTextStyles.labelSmall,
       ),
 
-      // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.neonRed,
@@ -133,7 +124,6 @@ class AppTheme {
         ),
       ),
 
-      // Divider
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
         thickness: 0.5,

@@ -84,7 +84,7 @@ class _GenresScreenState extends State<GenresScreen> {
                               color: AppColors.surfaceElevated,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.music_note_rounded, color: AppColors.neonRed),
+                            child: Icon(Icons.music_note_rounded, color: AppColors.neonRed),
                           ),
                           title: Text(genre, style: AppTextStyles.bodyLarge),
                           subtitle: Text('$count canciones', style: AppTextStyles.bodyMedium),
@@ -112,7 +112,7 @@ class _GenresScreenState extends State<GenresScreen> {
         title: Text(_selectedGenre ?? 'Género', style: AppTextStyles.titleMedium),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+          ? Center(child: CircularProgressIndicator(color: AppColors.accent))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _genreSongs.length,

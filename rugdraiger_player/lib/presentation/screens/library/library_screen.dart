@@ -230,7 +230,7 @@ class _SongsTab extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: AppColors.neonRed)),
+            child: Text('Close', style: TextStyle(color: AppColors.neonRed)),
           ),
         ],
       ),
@@ -319,7 +319,7 @@ class _ArtistsTab extends StatelessWidget {
               leading: CircleAvatar(
                 backgroundColor: AppColors.surfaceCard,
                 radius: 24,
-                child: const Icon(Icons.person_rounded, color: AppColors.neonRed, size: 24),
+                child: Icon(Icons.person_rounded, color: AppColors.neonRed, size: 24),
               ),
               title: Text(artist, style: AppTextStyles.titleMedium),
               trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
@@ -353,7 +353,7 @@ class _PlaylistsTab extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.add_rounded, color: AppColors.neonRed),
+                      Icon(Icons.add_rounded, color: AppColors.neonRed),
                       const SizedBox(width: 8),
                       Text('NEW PLAYLIST', style: AppTextStyles.neonLabel),
                     ],
@@ -382,7 +382,7 @@ class _PlaylistsTab extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: AppColors.border),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.playlist_play_rounded,
                               color: AppColors.neonRed,
                             ),
@@ -429,7 +429,7 @@ class _PlaylistsTab extends StatelessWidget {
                 Navigator.pop(dialogCtx);
               }
             },
-            child: const Text('Create', style: TextStyle(color: AppColors.neonRed)),
+            child: Text('Create', style: TextStyle(color: AppColors.neonRed)),
           ),
         ],
       ),

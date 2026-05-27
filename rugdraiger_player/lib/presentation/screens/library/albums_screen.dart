@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/song_model.dart';
 import '../../bloc/library/library_bloc.dart';
 import '../../bloc/player/player_bloc.dart';
 import '../../utils/player_navigation.dart';
 import '../../widgets/album_card.dart';
 import '../../widgets/artwork_widget.dart';
+import '../../widgets/playing_track_row.dart';
 import '../../widgets/song_actions_sheet.dart';
 
 class AlbumsScreen extends StatefulWidget {
@@ -151,7 +151,7 @@ class _AlbumDetail extends StatelessWidget {
                             color: AppColors.surfaceElevated,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.album_rounded, color: AppColors.accent, size: 48),
+                          child: Icon(Icons.album_rounded, color: AppColors.accent, size: 48),
                         ),
                       if (cover != null)
                         Positioned(
@@ -205,52 +205,24 @@ class _AlbumDetail extends StatelessWidget {
               ...songs.asMap().entries.map((entry) {
                 final i = entry.key;
                 final song = entry.value;
-                return _TrackRow(song: song, index: i, queue: songs);
+                return PlayingTrackRow(
+                  song: song,
+                  index: i,
+                  queue: songs,
+                  onTap: () {
+                    context.read<PlayerBloc>().add(PlaySongEvent(song, queue: songs, index: i));
+                    openFullPlayer(context);
+                  },
+                  trailing: IconButton(
+                    icon: Icon(Icons.more_vert_rounded, color: AppColors.textTertiary, size: 20),
+                    onPressed: () => showSongActionsSheet(context, song: song),
+                  ),
+                );
               }),
             ],
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TrackRow extends StatelessWidget {
-  final SongModel song;
-  final int index;
-  final List<SongModel> queue;
-
-  const _TrackRow({required this.song, required this.index, required this.queue});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        context.read<PlayerBloc>().add(PlaySongEvent(song, queue: queue, index: index));
-        openFullPlayer(context);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 28,
-              child: Text('${song.trackNumber > 0 ? song.trackNumber : index + 1}',
-                  style: AppTextStyles.labelSmall, textAlign: TextAlign.center),
-            ),
-            ArtworkWidget(song: song, size: 38, borderRadius: 4),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(song.title, style: AppTextStyles.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-            Text(DurationFormatter.formatMs(song.durationMs), style: AppTextStyles.labelSmall),
-            IconButton(
-              icon: const Icon(Icons.more_vert_rounded, color: AppColors.textTertiary, size: 20),
-              onPressed: () => showSongActionsSheet(context, song: song),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

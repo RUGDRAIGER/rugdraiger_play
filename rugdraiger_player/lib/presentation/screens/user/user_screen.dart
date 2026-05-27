@@ -40,7 +40,7 @@ class UserScreen extends StatelessWidget {
               border: Border.all(color: AppColors.neonRed, width: 2),
               color: AppColors.surfaceCard,
             ),
-            child: const Icon(Icons.person_rounded, color: AppColors.neonRed, size: 40),
+            child: Icon(Icons.person_rounded, color: AppColors.neonRed, size: 40),
           ),
           const SizedBox(height: 12),
           Text(AppConstants.appName, style: AppTextStyles.headlineLarge.copyWith(

@@ -8,6 +8,7 @@ import 'package:rxdart/rxdart.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/song_model.dart';
 import 'artwork_media_uri.dart';
+import 'stop_after_service.dart';
 import 'widget_bridge.dart';
 
 class PlayerState {
@@ -139,6 +140,12 @@ class AudioPlayerService {
     player.currentIndexStream.listen((index) {
       if (index != null) {
         final prev = currentState;
+        if (prev.currentSong != null &&
+            index > prev.currentIndex &&
+            StopAfterService.instance.consumeIfEnabled(prev.currentSong!.id)) {
+          unawaited(_pauseAtIndex(prev.currentIndex, prev.currentSong!));
+          return;
+        }
         if (prev.repeatMode == RepeatMode.none &&
             prev.queue.isNotEmpty &&
             prev.currentIndex >= prev.queue.length - 1 &&
@@ -466,8 +473,19 @@ class AudioPlayerService {
     _updateState((s) => s.copyWith(isMuted: muted));
   }
 
+  Future<void> _pauseAtIndex(int index, SongModel song) async {
+    await _activePlayer.seek(Duration.zero, index: index);
+    await pause();
+    _updateState((s) => s.copyWith(currentIndex: index, currentSong: song));
+  }
+
   Future<void> _handleCompletion() async {
     final state = currentState;
+    if (StopAfterService.instance.consumeIfEnabled(state.currentSong?.id)) {
+      await pause();
+      await seekTo(Duration.zero);
+      return;
+    }
     if (state.repeatMode == RepeatMode.one || state.repeatMode == RepeatMode.all) {
       return;
     }

@@ -62,7 +62,7 @@ class _SongActionsSheet extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Cancelar')),
           TextButton(
             onPressed: () => Navigator.pop(dCtx, true),
-            child: const Text('Eliminar', style: TextStyle(color: AppColors.accent)),
+            child: Text('Eliminar', style: TextStyle(color: AppColors.accent)),
           ),
         ],
       ),
@@ -187,8 +187,8 @@ class _SongActionsSheet extends StatelessWidget {
                     },
                   ),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline_rounded, color: AppColors.accent),
-                  title: const Text('Eliminar canción', style: TextStyle(color: AppColors.accent)),
+                  leading: Icon(Icons.delete_outline_rounded, color: AppColors.accent),
+                  title: Text('Eliminar canción', style: TextStyle(color: AppColors.accent)),
                   onTap: () => _confirmDelete(context),
                 ),
               ],

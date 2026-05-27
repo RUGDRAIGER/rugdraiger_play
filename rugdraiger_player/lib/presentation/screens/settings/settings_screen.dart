@@ -3,6 +3,7 @@ import '../../../core/navigation/view_name.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../services/settings_service.dart';
+import '../../widgets/skin_picker.dart';
 
 class SettingsScreen extends StatefulWidget {
   final ValueChanged<ViewName>? onNavigateEqualizer;
@@ -67,6 +68,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
             _sectionTitle('Interfaz'),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Skin del reproductor',
+                style: AppTextStyles.bodyLarge,
+              ),
+            ),
+            const SkinPicker(),
+            const SizedBox(height: 8),
             _toggle(
               'Colores dinámicos',
               'Acentos desde la carátula actual',

@@ -87,7 +87,7 @@ class _ArtistsScreenState extends State<ArtistsScreen> {
                           leading: CircleAvatar(
                             backgroundColor: AppColors.surfaceElevated,
                             radius: 24,
-                            child: const Icon(Icons.person_rounded, color: AppColors.accent),
+                            child: Icon(Icons.person_rounded, color: AppColors.accent),
                           ),
                           title: Text(artist, style: AppTextStyles.titleMedium),
                           trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -10,6 +12,7 @@ import '../../../services/artwork_cache.dart';
 import '../../bloc/player/player_bloc.dart';
 import '../../widgets/artwork_widget.dart';
 import '../../widgets/favorite_button.dart';
+import '../../widgets/stop_after_hand_button.dart';
 import '../../widgets/volume_fader.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -91,7 +94,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 SizedBox(height: isCompact ? 4 : 8),
                                 _buildQualityBadge(state),
                                 SizedBox(height: isCompact ? 10 : 16),
-                                _buildArtwork(state, artworkSize),
+                                _buildArtworkRow(state, artworkSize),
                                 SizedBox(height: isCompact ? 16 : 28),
                                 _buildSongInfo(context, state),
                                 SizedBox(height: isCompact ? 16 : 24),
@@ -196,7 +199,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               ),
               const SizedBox(height: 8),
               ListTile(
-                leading: const Icon(Icons.image_search_rounded, color: AppColors.neonRed),
+                leading: Icon(Icons.image_search_rounded, color: AppColors.neonRed),
                 title: const Text('Buscar imagen de carátula'),
                 subtitle: Text(
                   song.title,
@@ -260,13 +263,65 @@ class _PlayerScreenState extends State<PlayerScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.hd_outlined, color: AppColors.neonRed, size: 14),
+          Icon(Icons.hd_outlined, color: AppColors.neonRed, size: 14),
           const SizedBox(width: 6),
           Text(
             song.isLossless ? song.qualityBadge : song.formattedBitrate,
             style: AppTextStyles.neonLabel.copyWith(fontSize: 10),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildArtworkRow(PlayerBlocState state, double size) {
+    final prev = _neighborSong(state, -1);
+    final next = _neighborSong(state, 1);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        prev != null ? _buildNeighborPreview(prev) : const SizedBox(width: 72),
+        const SizedBox(width: 12),
+        _buildArtwork(state, size),
+        const SizedBox(width: 12),
+        next != null ? _buildNeighborPreview(next) : const SizedBox(width: 72),
+      ],
+    );
+  }
+
+  SongModel? _neighborSong(PlayerBlocState state, int delta) {
+    if (state.queue.isEmpty) return null;
+    final idx = state.currentIndex + delta;
+    if (idx < 0 || idx >= state.queue.length) return null;
+    return state.queue[idx];
+  }
+
+  Widget _buildNeighborPreview(SongModel song) {
+    return SizedBox(
+      width: 72,
+      child: Opacity(
+        opacity: 0.55,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                child: ArtworkWidget(song: song, size: 56, borderRadius: 8),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              song.title,
+              style: AppTextStyles.labelSmall.copyWith(fontSize: 10, color: AppColors.textSecondary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -322,7 +377,14 @@ class _PlayerScreenState extends State<PlayerScreen>
             ],
           ),
         ),
-        FavoriteButton(song: song, size: 28),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            FavoriteButton(song: song, size: 28),
+            const SizedBox(height: 8),
+            StopAfterHandButton(songId: song.id, size: 22),
+          ],
+        ),
       ],
     );
   }
@@ -451,7 +513,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.error_outline_rounded,
                         size: 56,
                         color: AppColors.accent,
@@ -505,7 +567,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 32),
-                    const CircularProgressIndicator(
+                    CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
                       strokeWidth: 2,
                     ),

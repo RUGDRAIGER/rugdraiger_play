@@ -63,7 +63,7 @@ class MobileNavDrawer extends StatelessWidget {
                           const SizedBox(width: 10),
                           Text(
                             AppConstants.appName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.accent,
                               fontSize: 15,
                               fontWeight: FontWeight.w800,

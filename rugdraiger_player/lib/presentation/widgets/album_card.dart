@@ -214,7 +214,7 @@ class _QualityBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 8,
           fontWeight: FontWeight.w700,
           color: AppColors.neonRedLight,

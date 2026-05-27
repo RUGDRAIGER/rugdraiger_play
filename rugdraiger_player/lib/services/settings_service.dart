@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants/app_constants.dart';
+import '../core/theme/accent_palette.dart';
+import '../core/theme/player_skins.dart';
 
 class SettingsService extends ChangeNotifier {
   SettingsService._();
@@ -11,6 +14,7 @@ class SettingsService extends ChangeNotifier {
   static const _keyDrivingMode = 'driving_mode';
   static const _keyMediaKeys = 'media_keys';
   static const _keyShowLyrics = 'show_lyrics';
+  static const _keySkinId = AppConstants.keyThemeAccent;
 
   bool gaplessPlayback = true;
   bool replayGainEnabled = true;
@@ -18,6 +22,7 @@ class SettingsService extends ChangeNotifier {
   bool drivingMode = false;
   bool mediaKeysEnabled = true;
   bool showLyrics = true;
+  String skinId = defaultSkinId;
   bool _loaded = false;
 
   Future<void> load() async {
@@ -29,48 +34,62 @@ class SettingsService extends ChangeNotifier {
     drivingMode = prefs.getBool(_keyDrivingMode) ?? false;
     mediaKeysEnabled = prefs.getBool(_keyMediaKeys) ?? true;
     showLyrics = prefs.getBool(_keyShowLyrics) ?? true;
+    skinId = prefs.getString(_keySkinId) ?? defaultSkinId;
+    applyPlayerSkin(skinId);
     _loaded = true;
     notifyListeners();
   }
 
-  Future<void> _save(String key, bool value) async {
+  Future<void> _saveBool(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
   }
 
+  Future<void> _saveString(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
   Future<void> setGaplessPlayback(bool value) async {
     gaplessPlayback = value;
-    await _save(_keyGapless, value);
+    await _saveBool(_keyGapless, value);
     notifyListeners();
   }
 
   Future<void> setReplayGainEnabled(bool value) async {
     replayGainEnabled = value;
-    await _save(_keyReplayGain, value);
+    await _saveBool(_keyReplayGain, value);
     notifyListeners();
   }
 
   Future<void> setDynamicColors(bool value) async {
     dynamicColors = value;
-    await _save(_keyDynamicColors, value);
+    await _saveBool(_keyDynamicColors, value);
     notifyListeners();
   }
 
   Future<void> setDrivingMode(bool value) async {
     drivingMode = value;
-    await _save(_keyDrivingMode, value);
+    await _saveBool(_keyDrivingMode, value);
     notifyListeners();
   }
 
   Future<void> setMediaKeysEnabled(bool value) async {
     mediaKeysEnabled = value;
-    await _save(_keyMediaKeys, value);
+    await _saveBool(_keyMediaKeys, value);
     notifyListeners();
   }
 
   Future<void> setShowLyrics(bool value) async {
     showLyrics = value;
-    await _save(_keyShowLyrics, value);
+    await _saveBool(_keyShowLyrics, value);
+    notifyListeners();
+  }
+
+  Future<void> setSkinId(String id) async {
+    skinId = id;
+    applyPlayerSkin(id);
+    await _saveString(_keySkinId, id);
     notifyListeners();
   }
 }

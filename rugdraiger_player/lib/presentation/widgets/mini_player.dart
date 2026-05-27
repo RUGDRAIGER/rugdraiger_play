@@ -26,7 +26,7 @@ class MiniPlayer extends StatelessWidget {
               LinearProgressIndicator(
                 value: state.progress.clamp(0.0, 1.0),
                 backgroundColor: AppColors.surface3,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
                 minHeight: 3,
               ),
               SizedBox(
@@ -83,7 +83,7 @@ class MiniPlayer extends StatelessWidget {
                         child: Container(
                           width: 40,
                           height: 40,
-                          decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+                          decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
                           child: Icon(
                             state.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                             color: Colors.white,

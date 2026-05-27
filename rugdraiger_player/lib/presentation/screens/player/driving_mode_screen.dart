@@ -72,7 +72,7 @@ class DrivingModeScreen extends StatelessWidget {
                       LinearProgressIndicator(
                         value: state.progress.clamp(0.0, 1.0),
                         backgroundColor: AppColors.surface3,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.neonRed),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.neonRed),
                         minHeight: 4,
                         borderRadius: BorderRadius.circular(2),
                       ),

@@ -82,7 +82,7 @@ class AppTextStyles {
     letterSpacing: 0.8,
   );
 
-  static const TextStyle neonLabel = TextStyle(
+  static TextStyle get neonLabel => TextStyle(
     fontFamily: _fontFamily,
     fontSize: 11,
     fontWeight: FontWeight.w700,

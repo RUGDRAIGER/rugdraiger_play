@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/playlist_model.dart';
 import '../../bloc/library/library_bloc.dart';
 import '../../bloc/player/player_bloc.dart';
 import '../../utils/player_navigation.dart';
-import '../../widgets/album_card.dart';
-import '../../widgets/artwork_widget.dart';
+import '../../widgets/playing_track_row.dart';
 import '../../widgets/song_actions_sheet.dart';
 
 class PlaylistsScreen extends StatefulWidget {
@@ -52,21 +50,23 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                         itemCount: playlistSongs.length,
                         itemBuilder: (context, index) {
                           final song = playlistSongs[index];
-                          return SongListTile(
-                            title: song.title,
-                            artist: song.artist,
-                            duration: DurationFormatter.formatMs(song.durationMs),
-                            leading: ArtworkWidget(song: song, size: 46, borderRadius: 6),
+                          return PlayingTrackRow(
+                            song: song,
+                            index: index,
+                            queue: playlistSongs,
                             onTap: () {
                               context.read<PlayerBloc>().add(
                                 PlaySongEvent(song, queue: playlistSongs, index: index),
                               );
                               openFullPlayer(context);
                             },
-                            onMoreTap: () => showSongActionsSheet(
-                              context,
-                              song: song,
-                              playlistId: playlist.id,
+                            trailing: IconButton(
+                              icon: Icon(Icons.more_vert_rounded, color: AppColors.textTertiary, size: 20),
+                              onPressed: () => showSongActionsSheet(
+                                context,
+                                song: song,
+                                playlistId: playlist.id,
+                              ),
                             ),
                           );
                         },
@@ -96,10 +96,10 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () => _createPlaylist(context),
-                  icon: const Icon(Icons.add_rounded, color: AppColors.accent),
-                  label: const Text('Nueva playlist', style: TextStyle(color: AppColors.accent)),
+                  icon: Icon(Icons.add_rounded, color: AppColors.accent),
+                  label: Text('Nueva playlist', style: TextStyle(color: AppColors.accent)),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.borderAccent),
+                    side: BorderSide(color: AppColors.borderAccent),
                     backgroundColor: AppColors.accentSubtle,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -124,7 +124,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: AppColors.borderSubtle),
                             ),
-                            child: const Icon(Icons.queue_music_rounded, color: AppColors.accent),
+                            child: Icon(Icons.queue_music_rounded, color: AppColors.accent),
                           ),
                           title: Text(playlist.name, style: AppTextStyles.titleMedium),
                           subtitle: Text(
@@ -168,7 +168,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 Navigator.pop(dialogCtx);
               }
             },
-            child: const Text('Crear', style: TextStyle(color: AppColors.accent)),
+            child: Text('Crear', style: TextStyle(color: AppColors.accent)),
           ),
         ],
       ),

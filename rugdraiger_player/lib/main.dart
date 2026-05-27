@@ -14,6 +14,7 @@ import 'data/repositories/music_repository.dart';
 import 'services/audio_service.dart';
 import 'services/equalizer_service.dart';
 import 'services/permission_service.dart';
+import 'services/settings_service.dart';
 import 'presentation/bloc/player/player_bloc.dart';
 import 'presentation/bloc/library/library_bloc.dart';
 import 'presentation/screens/home/main_scaffold.dart';
@@ -38,6 +39,7 @@ Future<void> main() async {
   }
 
   await _initPlatformServices();
+  await SettingsService.instance.load();
   runApp(const RugdraigerApp());
 }
 
@@ -76,8 +78,29 @@ Future<void> _initPlatformServices() async {
   }
 }
 
-class RugdraigerApp extends StatelessWidget {
+class RugdraigerApp extends StatefulWidget {
   const RugdraigerApp({super.key});
+
+  @override
+  State<RugdraigerApp> createState() => _RugdraigerAppState();
+}
+
+class _RugdraigerAppState extends State<RugdraigerApp> {
+  final _settings = SettingsService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _settings.addListener(_onSettingsChanged);
+  }
+
+  @override
+  void dispose() {
+    _settings.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +203,7 @@ class _PermissionGateState extends State<_PermissionGate> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
           child: Column(
@@ -214,7 +237,7 @@ class _PermissionGateState extends State<_PermissionGate> {
               children: [
                 const _AppLogo(),
                 const SizedBox(height: 32),
-                const Icon(Icons.library_music_rounded, color: AppColors.accent, size: 48),
+                Icon(Icons.library_music_rounded, color: AppColors.accent, size: 48),
                 const SizedBox(height: 20),
                 const Text(
                   'Acceso a tu música',
@@ -299,7 +322,7 @@ class _AppLogo extends StatelessWidget {
             child: Image.asset(
               'assets/icons/app_icon.png',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(
+              errorBuilder: (_, __, ___) => Icon(
                 Icons.play_circle_filled_rounded,
                 color: AppColors.accent,
                 size: 52,
@@ -308,7 +331,7 @@ class _AppLogo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'RUGDRAIGER',
           style: TextStyle(
             color: AppColors.neonRed,
