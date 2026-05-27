@@ -31,7 +31,7 @@ const STANDARD_FOLDER_LABELS = {
 
 let mainWin = null;
 let notchWin = null;
-let playerState = { hasTrack: false, title: '', artist: '', isPlaying: false, artwork: '' };
+let playerState = { hasTrack: false, title: '', artist: '', isPlaying: false, artwork: '', accentColor: '#FF2020' };
 let grantedScanRoots = [];
 
 function assetPath(...parts) {
@@ -277,6 +277,7 @@ function registerIpc() {
       artist: state?.artist || '',
       isPlaying: !!state?.isPlaying,
       artwork: state?.artwork || '',
+      accentColor: state?.accentColor || '#FF2020',
     };
     updateNotchVisibility();
     if (notchWin?.isVisible()) notchWin.webContents.send('notch:state', playerState);

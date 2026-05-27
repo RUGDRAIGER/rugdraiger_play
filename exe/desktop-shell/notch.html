@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rugdraiger Play — Notch</title>
   <style>
+    :root {
+      --accent: #FF2020;
+      --accent-border: rgba(255, 32, 32, 0.35);
+      --accent-overlay: rgba(255, 32, 32, 0.18);
+      --accent-hover: rgba(255, 32, 32, 0.35);
+      --accent-play: rgba(255, 32, 32, 0.85);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       width: 100%;
@@ -28,7 +35,7 @@
       height: 100%;
       border-radius: 29px;
       overflow: hidden;
-      border: 1px solid rgba(255, 32, 32, 0.35);
+      border: 1px solid var(--accent-border);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
       background: #0a0a0a;
       display: flex;
@@ -37,7 +44,7 @@
       padding: 6px 12px 6px 6px;
       opacity: 0;
       transform: translateY(-8px) scale(0.96);
-      transition: opacity 0.22s ease, transform 0.22s ease;
+      transition: opacity 0.22s ease, transform 0.22s ease, border-color 0.2s ease;
     }
     .notch-pill.visible {
       opacity: 1;
@@ -54,7 +61,8 @@
     .notch-overlay {
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(10,10,10,0.82), rgba(255,32,32,0.18));
+      background: linear-gradient(135deg, rgba(10,10,10,0.82), var(--accent-overlay));
+      transition: background 0.2s ease;
     }
     .notch-content {
       position: relative;
@@ -121,14 +129,15 @@
       place-items: center;
       transition: background 0.15s ease, transform 0.15s ease;
     }
-    button:hover { background: rgba(255, 32, 32, 0.35); }
+    button:hover { background: var(--accent-hover); }
     button:active { transform: scale(0.94); }
     button.play {
       width: 34px;
       height: 34px;
-      background: rgba(255, 32, 32, 0.85);
+      background: var(--accent-play);
+      transition: background 0.15s ease, transform 0.15s ease;
     }
-    button.play:hover { background: #ff2020; }
+    button.play:hover { background: var(--accent); }
     svg { display: block; }
   </style>
 </head>
@@ -168,6 +177,30 @@
     const playIcon = document.getElementById('playIcon');
     let playing = false;
 
+    function hexToRgb(hex) {
+      const h = (hex || '#FF2020').replace('#', '');
+      return {
+        r: parseInt(h.slice(0, 2), 16),
+        g: parseInt(h.slice(2, 4), 16),
+        b: parseInt(h.slice(4, 6), 16),
+      };
+    }
+
+    function rgbaHex(hex, alpha) {
+      const { r, g, b } = hexToRgb(hex);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function applyAccentColor(hex) {
+      const accent = hex || '#FF2020';
+      const root = document.documentElement;
+      root.style.setProperty('--accent', accent);
+      root.style.setProperty('--accent-border', rgbaHex(accent, 0.35));
+      root.style.setProperty('--accent-overlay', rgbaHex(accent, 0.18));
+      root.style.setProperty('--accent-hover', rgbaHex(accent, 0.35));
+      root.style.setProperty('--accent-play', rgbaHex(accent, 0.85));
+    }
+
     function setPlaying(isPlaying) {
       playing = isPlaying;
       playIcon.innerHTML = isPlaying
@@ -176,6 +209,8 @@
     }
 
     function applyState(state) {
+      if (state?.accentColor) applyAccentColor(state.accentColor);
+
       if (!state?.hasTrack) {
         pill.classList.remove('visible');
         return;

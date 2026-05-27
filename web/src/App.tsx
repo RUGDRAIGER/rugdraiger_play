@@ -40,6 +40,7 @@ export default function App() {
   const { currentSong, isPlaying, togglePlay, next, prev, seekTo, progress, duration } = usePlayerStore()
   const drivingMode = useSettingsStore((s) => s.drivingMode)
   const mediaKeysEnabled = useSettingsStore((s) => s.mediaKeysEnabled)
+  const skinId = useSettingsStore((s) => s.skinId)
 
   useEffect(() => {
     let cancelled = false
@@ -143,8 +144,8 @@ export default function App() {
 
   useEffect(() => {
     if (!hasDesktopOverlay) return
-    void syncElectronPlayerState(currentSong, isPlaying)
-  }, [currentSong?.id, currentSong?.title, currentSong?.artist, currentSong?.artwork, isPlaying, hasDesktopOverlay])
+    void syncElectronPlayerState(currentSong, isPlaying, skinId)
+  }, [currentSong?.id, currentSong?.title, currentSong?.artist, currentSong?.artwork, isPlaying, skinId, hasDesktopOverlay])
 
   function navigate(view: ViewName) {
     setNavTick((t) => t + 1)

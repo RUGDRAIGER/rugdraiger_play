@@ -11,6 +11,7 @@ export interface ElectronPlayerStatePayload {
   artist: string
   isPlaying: boolean
   artwork?: string
+  accentColor?: string
 }
 
 export type NotchCommand = 'play-pause' | 'next' | 'prev' | 'focus'

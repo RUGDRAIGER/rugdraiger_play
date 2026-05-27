@@ -882,3 +882,104 @@ input[type="range"].eq-band:disabled::-webkit-slider-thumb {
   filter: blur(0.4px);
 }
 
+/* Selector de skin — grupos comparativos */
+.skin-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skin-picker-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.skin-picker-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--accent);
+  background: linear-gradient(90deg, var(--accent-soft-08), transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+.skin-picker-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.skin-picker-group-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.skin-picker-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-surface2);
+  padding: 4px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.skin-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+.skin-picker-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+
+.skin-picker-swatch:hover {
+  border-color: var(--border-accent);
+  background: var(--accent-soft-06);
+}
+
+.skin-picker-swatch--selected {
+  border: 2px solid var(--swatch-color, var(--accent));
+  background: color-mix(in srgb, var(--swatch-color, var(--accent)) 12%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--swatch-color, var(--accent)) 40%, transparent);
+}
+
+.skin-picker-swatch-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--swatch-color, var(--accent));
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--swatch-color, var(--accent)) 50%, transparent);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.skin-picker-swatch-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.skin-picker-swatch--selected .skin-picker-swatch-name {
+  color: var(--swatch-color, var(--accent));
+  font-weight: 700;
+}
+

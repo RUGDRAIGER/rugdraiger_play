@@ -2,6 +2,7 @@ import type { Song } from '../types'
 import type { ElectronPlayerStatePayload } from '../types/electron'
 import { hasDesktopOverlay } from '../utils/platform'
 import { resolveArtworkSrc } from './artworkFileService'
+import { getAccentForSkin } from './themeService'
 
 export function bindElectronNotchCommands(handlers: {
   onPlayPause: () => void
@@ -22,6 +23,7 @@ export function bindElectronNotchCommands(handlers: {
 export async function syncElectronPlayerState(
   song: Song | null,
   isPlaying: boolean,
+  skinId: string,
 ): Promise<void> {
   if (!hasDesktopOverlay || !window.electronAPI?.sendPlayerState) return
 
@@ -36,6 +38,7 @@ export async function syncElectronPlayerState(
     artist: song?.artist ?? '',
     isPlaying,
     artwork,
+    accentColor: getAccentForSkin(skinId),
   }
 
   window.electronAPI.sendPlayerState(payload)

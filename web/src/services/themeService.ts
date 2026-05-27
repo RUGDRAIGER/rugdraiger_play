@@ -71,6 +71,10 @@ export function applyPlayerSkin(skinId: string): PlayerSkin {
   return skin
 }
 
+export function getAccentForSkin(skinId: string): string {
+  return getSkinById(skinId)?.accent ?? getSkinById(DEFAULT_SKIN_ID)!.accent
+}
+
 export function initPlayerSkin(skinId: string) {
   applyPlayerSkin(skinId)
 }

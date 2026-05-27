@@ -32,7 +32,7 @@ const STANDARD_FOLDER_LABELS = {
 
 let mainWin = null;
 let overlayWin = null;
-let playerState = { hasTrack: false, title: '', artist: '', isPlaying: false, artwork: '' };
+let playerState = { hasTrack: false, title: '', artist: '', isPlaying: false, artwork: '', accentColor: '#FF2020' };
 let grantedScanRoots = [];
 
 function assetPath(...parts) {
@@ -299,6 +299,7 @@ function registerIpc() {
       artist: state?.artist || '',
       isPlaying: !!state?.isPlaying,
       artwork: state?.artwork || '',
+      accentColor: state?.accentColor || '#FF2020',
     };
     updateOverlayVisibility();
     if (overlayWin?.isVisible()) overlayWin.webContents.send('notch:state', playerState);
