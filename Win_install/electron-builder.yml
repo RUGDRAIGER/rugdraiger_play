@@ -1,0 +1,47 @@
+appId: com.rugdraiger.play
+productName: Rugdraiger Play
+copyright: Copyright © Rugdraiger
+electronVersion: 33.2.1
+
+directories:
+  app: ../exe/desktop-shell
+  output: dist
+  buildResources: assets
+
+files:
+  - "**/*"
+  - "!node_modules/**"
+  - "!assets/app.iconset/**"
+  - "!scripts/**"
+  - "!package-lock.json"
+
+asar: true
+
+extraResources:
+  - from: ../web/dist
+    to: dist
+    filter:
+      - "**/*"
+
+win:
+  icon: ../exe/desktop-shell/assets/app-icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  installerIcon: ../exe/desktop-shell/assets/app-icon.ico
+  uninstallerIcon: ../exe/desktop-shell/assets/app-icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Rugdraiger Play
+  language: 1034
+  installerLanguages:
+    - es_ES
+    - en_US
+  artifactName: RugdraigerPlay-Setup.${ext}

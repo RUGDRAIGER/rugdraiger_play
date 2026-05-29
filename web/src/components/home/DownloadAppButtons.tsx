@@ -1,4 +1,9 @@
-import { APK_DOWNLOAD_URL, MACOS_DOWNLOAD_URL, WINDOWS_DOWNLOAD_URL } from '../../constants/appBranding'
+import {
+  APK_DOWNLOAD_URL,
+  MACOS_DOWNLOAD_URL,
+  WIN_INSTALL_DOWNLOAD_URL,
+  WINDOWS_DOWNLOAD_URL,
+} from '../../constants/appBranding'
 
 function WindowsIcon() {
   return (
@@ -45,7 +50,7 @@ export function DownloadAppButtons() {
         href={WINDOWS_DOWNLOAD_URL}
         download="RugdraigerPlay-Windows.zip"
         className="home-download-link"
-        title="Descargar Rugdraiger Play para escritorio Windows"
+        title="Descargar Rugdraiger Play para escritorio Windows (ZIP portable)"
       >
         <span className="home-download-icon">
           <WindowsIcon />
@@ -53,6 +58,20 @@ export function DownloadAppButtons() {
         <span className="home-download-text">
           <span className="home-download-label">Windows</span>
           <span className="home-download-hint">Descargar app</span>
+        </span>
+      </a>
+      <a
+        href={WIN_INSTALL_DOWNLOAD_URL}
+        download="RugdraigerPlay-Setup.exe"
+        className="home-download-link"
+        title="Instalador de Rugdraiger Play para Windows"
+      >
+        <span className="home-download-icon">
+          <WindowsIcon />
+        </span>
+        <span className="home-download-text">
+          <span className="home-download-label">Win_install</span>
+          <span className="home-download-hint">Instalador</span>
         </span>
       </a>
       <a

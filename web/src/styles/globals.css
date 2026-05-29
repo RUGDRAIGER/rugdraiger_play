@@ -556,7 +556,7 @@ input[type="range"].eq-band:disabled::-webkit-slider-thumb {
     flex-direction: row;
     flex-wrap: wrap;
     width: auto;
-    max-width: 520px;
+    max-width: 680px;
   }
 
   .home-download-link {
