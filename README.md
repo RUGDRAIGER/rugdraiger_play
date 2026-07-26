@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173` en Chrome.
+Abre `http://localhost:5199` en Chrome (puerto distinto al proyecto bomberos, que usa 5173).
 
 ### PWA + Android
 
