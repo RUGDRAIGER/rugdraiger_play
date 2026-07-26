@@ -5,6 +5,7 @@ Thumbs.db
 # Web (Vite + React)
 web/node_modules/
 web/dist/
+web/dev-dist/
 web/.venv/
 
 # Flutter / Dart
