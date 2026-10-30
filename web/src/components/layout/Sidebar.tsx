@@ -70,7 +70,7 @@ export function Sidebar({ activeView, onNavigate }: Props) {
       </nav>
 
       <div style={{ padding: '12px 20px 20px', color: 'var(--text-tertiary)', fontSize: 11 }}>
-        Rugdraiger Play v1.0
+        Rugdraiger Play v2.2
       </div>
     </aside>
   )

@@ -5,8 +5,10 @@ import { PlayableArtwork } from '../ui/PlayableArtwork'
 import { SongActionsMenu } from '../ui/SongActionsMenu'
 import { openSongMenu, handleSongMenuOpenChange, type SongMenuState } from '../ui/songMenuUtils'
 import { formatDuration, formatSongFormat } from '../../services/scannerService'
+import { MusicSourceBadge } from '../ui/MusicSourceBadge'
 
 type SortKey = 'title' | 'artist' | 'album' | 'format' | 'duration' | 'dateAdded'
+type SourceFilter = 'all' | 'local' | 'navidrome'
 
 const GRID = '40px 1fr 1fr 1fr 52px 60px 36px'
 
@@ -16,10 +18,14 @@ export function SongsView() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('title')
   const [sortAsc, setSortAsc] = useState(true)
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [menuState, setMenuState] = useState<SongMenuState | null>(null)
 
   const filtered = useMemo(() => {
     let list = songs
+    if (sourceFilter !== 'all') {
+      list = list.filter((song) => (song.source ?? 'local') === sourceFilter)
+    }
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter((s) =>
@@ -35,7 +41,10 @@ export function SongsView() {
       return sortAsc ? cmp : -cmp
     })
     return list
-  }, [songs, search, sortBy, sortAsc])
+  }, [songs, search, sortBy, sortAsc, sourceFilter])
+
+  const localCount = songs.filter((song) => (song.source ?? 'local') === 'local').length
+  const remoteCount = songs.filter((song) => song.source === 'navidrome').length
 
   function toggleSort(key: SortKey) {
     if (sortBy === key) setSortAsc(!sortAsc)
@@ -85,6 +94,22 @@ export function SongsView() {
               Reproducir
             </button>
           </div>
+        </div>
+        <div style={{ display: 'flex', gap: 7, marginTop: 10, flexWrap: 'wrap' }}>
+          {([
+            ['all', `Todas (${songs.length})`],
+            ['local', `Local (${localCount})`],
+            ['navidrome', `Navidrome (${remoteCount})`],
+          ] as Array<[SourceFilter, string]>).map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setSourceFilter(value)} style={{
+              padding: '5px 9px', borderRadius: 999, fontSize: 11, fontWeight: 650, cursor: 'pointer',
+              color: sourceFilter === value ? '#fff' : 'var(--text-secondary)',
+              background: sourceFilter === value ? 'var(--accent)' : 'var(--bg-surface)',
+              border: `1px solid ${sourceFilter === value ? 'var(--accent)' : 'var(--border)'}`,
+            }}>
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -151,9 +176,12 @@ export function SongsView() {
                     borderRadius={4}
                     onPlay={() => playSong(song, filtered)}
                   />
-                  <span style={{ fontSize: 13, fontWeight: isCurrent ? 600 : 400, color: isCurrent ? 'var(--accent)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {song.title}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: isCurrent ? 600 : 400, color: isCurrent ? 'var(--accent)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {song.title}
+                    </span>
+                    <MusicSourceBadge song={song} compact />
+                  </div>
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.album}</span>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist}</span>

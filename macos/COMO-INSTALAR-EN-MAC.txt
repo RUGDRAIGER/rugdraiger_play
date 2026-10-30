@@ -7,7 +7,7 @@ RUGDRAIGER PLAY — Instalación en macOS
 
 3. Arrastra "Rugdraiger Play.app" a la carpeta Aplicaciones (opcional).
 
-4. Primera apertura (app no firmada por Apple):
+4. Primera apertura (app con firma local, no notarizada por Apple):
 
    Si macOS dice: "Rugdraiger Play.app está dañado y no se puede abrir"
    → NO lo tires a la Papelera. La app NO está rota; macOS bloquea descargas
@@ -31,14 +31,12 @@ RUGDRAIGER PLAY — Instalación en macOS
 
 5. Escaneo automático de música:
 
-   Al abrir la app (o al pulsar "Escanear dispositivo"), macOS pedirá
-   autorización para buscar música. Se escanean automáticamente:
+   Al pulsar "Escanear dispositivo", macOS puede pedir autorización para las
+   carpetas protegidas. La app revisa las ubicaciones estándar disponibles:
 
      • Escritorio
      • Documentos
      • Descargas
-     • Videos
-     • Imágenes
      • Música
 
    También puedes usar "Elegir carpeta…" para añadir otra ubicación.
@@ -46,7 +44,12 @@ RUGDRAIGER PLAY — Instalación en macOS
    Si faltan archivos: Ajustes → Privacidad y seguridad → Acceso total al disco
    → activar Rugdraiger Play.
 
-Requisitos: macOS 11 (Big Sur) o superior, Apple Silicon o Intel.
+Requisitos: macOS 13 (Ventura) o superior y Apple Silicon (M1, M2, M3 o M4).
 
 Compilar desde el código:
   cd macos && chmod +x build-macos.sh && ./build-macos.sh
+
+Nota para distribución pública:
+  La firma local sirve para probar en el Mac que compila la app. Para evitar
+  avisos de Gatekeeper en otros Macs se requiere un certificado Developer ID y
+  notarización de Apple.

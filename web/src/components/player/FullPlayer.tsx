@@ -13,6 +13,7 @@ import { FavoriteButton } from '../ui/FavoriteButton'
 import { IconButton } from '../ui/IconButton'
 import { StopAfterHandButton } from '../ui/StopAfterHandButton'
 import { VolumeFader } from '../ui/VolumeFader'
+import { MusicSourceBadge } from '../ui/MusicSourceBadge'
 import type { Song } from '../../types'
 
 function NeighborTrackPreview({ song }: { song: Song }) {
@@ -221,6 +222,9 @@ export function FullPlayer() {
                   {currentSong.title}
                 </div>
                 <div style={{ fontSize: 16, color: 'var(--text-secondary)' }}>{currentSong.artist}</div>
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+                  <MusicSourceBadge song={currentSong} />
+                </div>
                 <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>{currentSong.album}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>

@@ -47,6 +47,13 @@ rugdraiger_player/android/key.properties
 * 2
 * 2.*
 
+# macOS desktop build artifacts
+macos/desktop-shell/node_modules/
+macos/_packager-out/
+macos/RugdraigerPlay/
+macos/RugdraigerPlay-macOS.zip
+macos/RugdraigerPlay-macOS.zip.sha256
+
 # Android TWA signing keys (never commit)
 android-twa/node_modules/
 android-twa/android.keystore

@@ -16,6 +16,7 @@ import { DownloadAppButtons } from './DownloadAppButtons'
 import { formatDuration, supportsDirectoryPicker } from '../../services/scannerService'
 import { supportsElectronScan } from '../../services/electronScannerService'
 import type { ViewName } from '../../types'
+import { MusicSourceBadge } from '../ui/MusicSourceBadge'
 
 interface Props {
   onNavigate: (v: ViewName) => void
@@ -38,9 +39,9 @@ const LIBRARY_LINKS: { id: ViewName; label: string; icon: string }[] = [
 export function HomeView({ onNavigate }: Props) {
   const store = useLibraryStore()
   const {
-    songs, albums, isScanning, scanProgress, error,
+    songs, albums, isScanning, scanProgress, error, isSyncingNavidrome, navidromeProgress,
     scanFromFiles, scanFromDirectory, scanFromElectronDefaults, scanFromElectronFolder, getAlbumSongs,
-    getFavorites, getMostPlayedThisMonth, getRecentlyPlayed, getRecentlyAdded,
+    getFavorites, getMostPlayedThisMonth, getRecentlyPlayed, getRecentlyAdded, syncNavidrome,
   } = store
   const { playSong } = usePlayerStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -54,6 +55,8 @@ export function HomeView({ onNavigate }: Props) {
   const recentlyAdded = getRecentlyAdded()
   const hasFsPicker = supportsDirectoryPicker()
   const hasElectronScan = supportsElectronScan()
+  const localCount = songs.filter((song) => (song.source ?? 'local') === 'local').length
+  const remoteCount = songs.filter((song) => song.source === 'navidrome').length
 
   const handleScanMusic = () => {
     if (hasElectronScan) {
@@ -104,7 +107,9 @@ export function HomeView({ onNavigate }: Props) {
             {APP_NAME}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-            {songs.length > 0 ? `${songs.length} canciones · ${albums.length} álbumes` : 'Tu biblioteca de música local'}
+            {songs.length > 0
+              ? `${localCount} local${localCount === 1 ? '' : 'es'} · ${remoteCount} Navidrome · ${albums.length} álbumes`
+              : 'Tu biblioteca local y Navidrome'}
           </p>
         </div>
         <div className="home-header-aside">
@@ -130,6 +135,12 @@ export function HomeView({ onNavigate }: Props) {
           style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: 13, cursor: 'pointer' }}>
           {hasElectronScan ? 'Elegir carpeta…' : 'Agregar archivos'}
         </button>
+        {remoteCount > 0 && (
+          <button type="button" onClick={() => void syncNavidrome()} disabled={isSyncingNavidrome}
+            style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', background: 'rgba(64, 156, 255, 0.12)', border: '1px solid rgba(64, 156, 255, 0.3)', color: '#8ec5ff', fontSize: 13, fontWeight: 650, cursor: isSyncingNavidrome ? 'wait' : 'pointer', opacity: isSyncingNavidrome ? 0.65 : 1 }}>
+            {isSyncingNavidrome ? `Sincronizando ${navidromeProgress?.imported ?? 0}…` : 'Actualizar Navidrome'}
+          </button>
+        )}
         {songs.length > 0 && (
           <button type="button" onClick={() => setClearStep(1)} style={{ padding: '10px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
             Limpiar
@@ -150,6 +161,12 @@ export function HomeView({ onNavigate }: Props) {
           <div style={{ height: 4, background: 'var(--bg-surface3)', borderRadius: 2 }}>
             <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.2s' }} />
           </div>
+        </div>
+      )}
+      {isSyncingNavidrome && (
+        <div style={{ padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(64, 156, 255, 0.1)', border: '1px solid rgba(64, 156, 255, 0.25)', color: '#8ec5ff', fontSize: 12 }}>
+          Importando Navidrome: {navidromeProgress?.imported ?? 0} canciones
+          {navidromeProgress?.current ? ` · ${navidromeProgress.current}` : ''}
         </div>
       )}
 
@@ -244,7 +261,10 @@ export function HomeView({ onNavigate }: Props) {
                     <PlayableArtwork song={song} size={40} borderRadius={5} onPlay={() => playSong(song, recentlyAdded)} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{song.artist}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 2 }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist}</span>
+                        <MusicSourceBadge song={song} compact />
+                      </div>
                     </div>
                     <FavoriteButton song={song} size={18} />
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDuration(song.duration)}</span>

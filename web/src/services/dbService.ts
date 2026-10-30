@@ -51,6 +51,16 @@ class RugdraigerDB extends Dexie {
         if (song.lyrics == null) song.lyrics = ''
       }),
     )
+    this.version(5).stores({
+      songs: 'id, title, artist, album, genre, dateAdded, isFavorite, lastPlayed, playCount, year, composer, source',
+      playlists: 'id, name, createdAt',
+      songBlobs: 'id',
+      songArtworks: 'id',
+    }).upgrade((tx) =>
+      tx.table('songs').toCollection().modify((song: Song) => {
+        if (!song.source) song.source = song.id.startsWith('navidrome:') ? 'navidrome' : 'local'
+      }),
+    )
   }
 }
 
@@ -58,7 +68,11 @@ export const db = new RugdraigerDB()
 
 export const dbService = {
   async getAllSongs(): Promise<Song[]> {
-    return db.songs.orderBy('title').toArray()
+    const songs = await db.songs.orderBy('title').toArray()
+    return songs.map((song) => ({
+      ...song,
+      source: song.source ?? (song.id.startsWith('navidrome:') ? 'navidrome' : 'local'),
+    }))
   },
 
   async getSongById(id: string): Promise<Song | undefined> {
@@ -81,7 +95,7 @@ export const dbService = {
         song.artwork = existing.artwork
       }
 
-      storable.push(song)
+      storable.push({ ...song, source: song.source ?? 'local' })
     }
 
     await db.songs.bulkPut(storable)
@@ -93,6 +107,45 @@ export const dbService = {
     if (blobRecords.length > 0) {
       await db.songBlobs.bulkPut(blobRecords)
     }
+  },
+
+  async replaceNavidromeSongs(songs: Song[]): Promise<void> {
+    const existing = await db.songs
+      .filter((song) => song.source === 'navidrome' || song.id.startsWith('navidrome:'))
+      .toArray()
+    const previous = new Map(existing.map((song) => [song.id, song]))
+    const remoteIds = existing.map((song) => song.id)
+    const next = songs.map((song) => {
+      const saved = previous.get(song.id)
+      return {
+        ...song,
+        source: 'navidrome' as const,
+        isFavorite: song.isFavorite || saved?.isFavorite || false,
+        playCount: saved?.playCount ?? song.playCount ?? 0,
+        lastPlayed: saved?.lastPlayed ?? song.lastPlayed ?? 0,
+      }
+    })
+
+    await db.transaction('rw', db.songs, db.songBlobs, db.songArtworks, async () => {
+      if (remoteIds.length) {
+        await db.songs.bulkDelete(remoteIds)
+        await db.songBlobs.bulkDelete(remoteIds)
+        await db.songArtworks.bulkDelete(remoteIds)
+      }
+      if (next.length) await db.songs.bulkPut(next)
+    })
+  },
+
+  async removeNavidromeSongs(): Promise<void> {
+    const remote = await db.songs
+      .filter((song) => song.source === 'navidrome' || song.id.startsWith('navidrome:'))
+      .primaryKeys()
+    if (!remote.length) return
+    await db.transaction('rw', db.songs, db.songBlobs, db.songArtworks, async () => {
+      await db.songs.bulkDelete(remote)
+      await db.songBlobs.bulkDelete(remote)
+      await db.songArtworks.bulkDelete(remote)
+    })
   },
 
   async getSongArtworkBlob(id: string): Promise<Blob | undefined> {

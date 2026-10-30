@@ -12,9 +12,9 @@ export const WINDOWS_DOWNLOAD_URL =
 export const WIN_INSTALL_DOWNLOAD_URL =
   'https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/Win_install/RugdraigerPlay-Setup.exe'
 
-/** ZIP ~289 MB en LFS; GitHub Pages sirve el puntero, no el binario. */
+/** La versión estable para Apple Silicon se distribuye como GitHub Release. */
 export const MACOS_DOWNLOAD_URL =
-  'https://github.com/RUGDRAIGER/rugdraiger_play/raw/gh-pages/macos/RugdraigerPlay-macOS.zip'
+  'https://github.com/RUGDRAIGER/rugdraiger_play/releases/latest/download/RugdraigerPlay-macOS.zip'
 
 export const APP_ICONS = {
   /** Icono principal (1024×1024) */

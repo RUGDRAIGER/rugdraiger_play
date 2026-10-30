@@ -12,6 +12,7 @@ import { cacheSongFiles, clearSongBlobCache, removeSongFromCache } from '../serv
 import { clearArtworkUrlCache, revokeArtworkUrl } from '../services/artworkFileService'
 import { usePlayerStore } from './playerStore'
 import { usePlaylistStore } from './playlistStore'
+import type { NavidromeSyncProgress } from '../types/electron'
 
 interface LibraryStore {
   songs: Song[]
@@ -21,6 +22,8 @@ interface LibraryStore {
   isLoading: boolean
   isScanning: boolean
   scanProgress: ScanProgress | null
+  navidromeProgress: NavidromeSyncProgress | null
+  isSyncingNavidrome: boolean
   error: string | null
 
   loadLibrary: () => Promise<void>
@@ -28,6 +31,8 @@ interface LibraryStore {
   scanFromDirectory: () => Promise<void>
   scanFromElectronDefaults: () => Promise<void>
   scanFromElectronFolder: () => Promise<void>
+  syncNavidrome: () => Promise<number>
+  removeNavidromeSongs: () => Promise<void>
   clearLibrary: () => Promise<void>
   deleteSong: (id: string) => Promise<void>
   deleteAlbum: (albumId: string) => Promise<void>
@@ -48,12 +53,14 @@ interface LibraryStore {
 function buildAlbums(songs: Song[]): Album[] {
   const map = new Map<string, Album>()
   for (const song of songs) {
-    const key = `${song.album}||${song.artist}`
+    const source = song.source ?? 'local'
+    const key = `${source}||${song.album}||${song.artist}`
     if (!map.has(key)) {
       map.set(key, {
         id: key.replace(/[^a-zA-Z0-9]/g, '_'),
         title: song.album,
         artist: song.artist,
+        source,
         artwork: song.artwork,
         year: song.year || undefined,
         songIds: [],
@@ -138,6 +145,8 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   isLoading: false,
   isScanning: false,
   scanProgress: null,
+  navidromeProgress: null,
+  isSyncingNavidrome: false,
   error: null,
 
   loadLibrary: async () => {
@@ -150,8 +159,23 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
         void backfillArtworks(songs, (id, artwork) => {
           void dbService.updateSongArtwork(id, artwork)
         }).then((updated) => {
-          set(rebuildLibraryState(updated))
+          // La búsqueda de carátulas es asíncrona y puede terminar después de
+          // una sincronización Navidrome. Aplicar sólo las imágenes evita que
+          // una copia antigua del catálogo restaure duración o metadatos viejos.
+          const artworkById = new Map(updated.filter((song) => song.artwork).map((song) => [song.id, song.artwork]))
+          const latest = get().songs.map((song) => {
+            const artwork = artworkById.get(song.id)
+            return artwork && artwork !== song.artwork ? { ...song, artwork } : song
+          })
+          set(rebuildLibraryState(latest))
         })
+      }
+
+      const api = window.electronAPI
+      if (api) {
+        void api.getNavidromeConfig()
+          .then((config) => { if (config.connected) void get().syncNavidrome() })
+          .catch(() => { /* la biblioteca local sigue disponible sin red */ })
       }
     } catch (e) {
       set({ error: String(e) })
@@ -222,7 +246,7 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     try {
       const songs = await scanElectronFullDevice((p) => set({ scanProgress: p }))
       if (songs.length === 0) {
-        set({ error: 'No se encontró música en Escritorio, Documentos, Descargas, Videos, Imágenes ni Música.' })
+        set({ error: 'No se encontró música en Escritorio, Documentos, Descargas ni Música.' })
         return
       }
       const artworkFromScan = new Map(songs.map((s) => [s.id, s.artwork]))
@@ -266,6 +290,31 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     } finally {
       set({ isScanning: false, scanProgress: null })
     }
+  },
+
+  syncNavidrome: async () => {
+    const api = window.electronAPI
+    if (!api?.syncNavidromeLibrary) throw new Error('Navidrome sólo está disponible en la app de escritorio')
+    set({ isSyncingNavidrome: true, navidromeProgress: { imported: 0, current: '' }, error: null })
+    try {
+      const remoteSongs = await api.syncNavidromeLibrary((progress) => set({ navidromeProgress: progress }))
+      await dbService.replaceNavidromeSongs(remoteSongs)
+      const all = await dbService.getAllSongs()
+      set(rebuildLibraryState(all))
+      return remoteSongs.length
+    } catch (error) {
+      const message = error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': Error: /, '') : String(error)
+      set({ error: message })
+      throw error
+    } finally {
+      set({ isSyncingNavidrome: false, navidromeProgress: null })
+    }
+  },
+
+  removeNavidromeSongs: async () => {
+    await dbService.removeNavidromeSongs()
+    const songs = await dbService.getAllSongs()
+    set(rebuildLibraryState(songs))
   },
 
   clearLibrary: async () => {

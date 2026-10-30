@@ -3,6 +3,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { LOSSLESS_FORMATS } from '../../constants/audioFormats'
 import { SkinPicker } from './SkinPicker'
 import { getSkinById } from '../../constants/playerSkins'
+import { NavidromeSettings } from './NavidromeSettings'
 
 function Toggle({ label, description, value, onChange }: {
   label: string
@@ -84,6 +85,11 @@ export function SettingsView({ onNavigateEqualizer }: Props) {
           value={settings.showLyrics}
           onChange={settings.setShowLyrics}
         />
+      </section>
+
+      <section>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Biblioteca remota</div>
+        <NavidromeSettings />
       </section>
 
       <section>

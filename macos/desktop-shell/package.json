@@ -1,16 +1,21 @@
 {
   "name": "rugdraiger-play-desktop-macos",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "private": true,
   "description": "Rugdraiger Play - escritorio macOS (misma UI que la web/APK)",
   "main": "main.js",
   "scripts": {
-    "build:web": "cd ../../web && (npm ci || npm install) && VITE_CAPACITOR=true npm run build",
+    "build:web": "npm --prefix ../../web ci && npm --prefix ../../web run build:desktop",
     "pack:mac": "npm run build:web && npm run pack:mac:only",
-    "pack:mac:only": "electron-packager . \"Rugdraiger Play\" --platform=darwin --arch=${ELECTRON_ARCH:-arm64} --out=../_packager-out --overwrite --ignore=\"node_modules|package-lock.json|\\.git|assets/app.iconset|assets/app-icon.png\" --extra-resource=../../web/dist"
+    "pack:mac:only": "electron-packager . \"Rugdraiger Play\" --platform=darwin --arch=${ELECTRON_ARCH:-arm64} --out=../_packager-out --overwrite --asar --app-bundle-id=com.rugdraiger.play --app-version=2.2.0 --build-version=2.2.0 --icon=assets/app-icon.icns --ignore=\"node_modules|package-lock.json|\\.git|assets/app.iconset|assets/app-icon.png|tests\" --extra-resource=../../web/dist",
+    "test": "node --test tests/*.test.js",
+    "check": "npm test && node --check main.js && node --check preload.js && node --check notchPreload.js && node --check scanner.js && node --check pathSecurity.js && node --check navidromeClient.js && node --check navidromeStore.js"
   },
   "devDependencies": {
-    "@electron/packager": "^18.4.4",
-    "electron": "^33.2.1"
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.2.0"
+  },
+  "allowScripts": {
+    "electron": true
   }
 }

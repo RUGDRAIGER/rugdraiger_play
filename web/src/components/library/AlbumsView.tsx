@@ -7,6 +7,7 @@ import { SongActionsMenu } from '../ui/SongActionsMenu'
 import { openSongMenu, handleSongMenuOpenChange, type SongMenuState } from '../ui/songMenuUtils'
 import { formatDuration } from '../../services/scannerService'
 import { PlayingTrackRow, TrackPausedIcon, TrackPlayingIcon, useIsCurrentTrack } from '../ui/PlayingTrackRow'
+import { MusicSourceBadge } from '../ui/MusicSourceBadge'
 import type { Album, Song } from '../../types'
 
 function AlbumTrackRow({
@@ -38,7 +39,10 @@ function AlbumTrackRow({
       </span>
       <PlayableArtwork song={song} size={38} borderRadius={4} onPlay={() => playSong(song, albumSongs)} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className={isCurrent ? 'track-row-title' : undefined} style={{ fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <div className={isCurrent ? 'track-row-title' : undefined} style={{ fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+          <MusicSourceBadge song={song} compact />
+        </div>
       </div>
       <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>{formatDuration(song.duration)}</span>
       <SongActionsMenu
@@ -107,6 +111,7 @@ export function AlbumsView() {
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 'clamp(20px, 5vw, 24px)', fontWeight: 800, marginBottom: 4, wordBreak: 'break-word' }}>{selected.title}</div>
               <div style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 8 }}>{selected.artist}</div>
+              {albumSongs[0] && <div style={{ marginBottom: 8 }}><MusicSourceBadge song={albumSongs[0]} /></div>}
               <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 16 }}>{albumSongs.length} canciones</div>
               <button
                 type="button"
@@ -185,7 +190,10 @@ export function AlbumsView() {
                       style={{ width: '100%', height: '100%' }}
                     />
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.title}</div>
+                    {albumSongs[0] && <MusicSourceBadge song={albumSongs[0]} compact />}
+                  </div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.artist}</div>
                 </div>
               )

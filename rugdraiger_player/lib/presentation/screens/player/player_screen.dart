@@ -223,7 +223,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     setState(() => _searchingArtwork = true);
     try {
       final art = await ArtworkCache.searchRemoteArtwork(song);
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
 
       final messenger = ScaffoldMessenger.of(context);
       if (art != null) {

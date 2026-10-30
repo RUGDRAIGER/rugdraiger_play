@@ -1,15 +1,42 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { cpSync, mkdirSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const isCapacitor = process.env.VITE_CAPACITOR === 'true'
-const base = process.env.VITE_BASE_PATH ?? (isCapacitor ? './' : '/')
+const isDesktop = process.env.VITE_DESKTOP === 'true'
+const base = process.env.VITE_BASE_PATH ?? (isCapacitor || isDesktop ? './' : '/')
+const projectRoot = dirname(fileURLToPath(import.meta.url))
+
+function desktopPublicAssets() {
+  return {
+    name: 'desktop-public-assets',
+    transformIndexHtml(html: string) {
+      return html.replace(/\s*<link rel="manifest"[^>]*>/, '')
+    },
+    closeBundle() {
+      const dist = resolve(projectRoot, 'dist')
+      mkdirSync(dist, { recursive: true })
+      for (const directory of ['icons', 'vendor']) {
+        cpSync(
+          resolve(projectRoot, 'public', directory),
+          resolve(dist, directory),
+          { recursive: true },
+        )
+      }
+    },
+  }
+}
 
 export default defineConfig({
   base,
+  publicDir: isDesktop ? false : 'public',
   plugins: [
     react(),
-    ...(isCapacitor ? [] : [VitePWA({
+    ...(isDesktop ? [desktopPublicAssets()] : []),
+    ...(isCapacitor || isDesktop ? [] : [VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: ['icons/**/*', 'vendor/**/*'],

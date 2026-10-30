@@ -19,6 +19,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   readLocalFile: (filePath) => ipcRenderer.invoke('read-local-file', filePath),
   getLocalFileUrl: (filePath) => ipcRenderer.invoke('get-local-file-url', filePath),
+  getNavidromeConfig: () => ipcRenderer.invoke('navidrome:get-config'),
+  connectNavidrome: (config) => ipcRenderer.invoke('navidrome:connect', config),
+  testNavidromeConnection: () => ipcRenderer.invoke('navidrome:test'),
+  disconnectNavidrome: () => ipcRenderer.invoke('navidrome:disconnect'),
+  syncNavidromeLibrary: (onProgress) => {
+    const progressHandler = (_event, data) => onProgress?.(data);
+    if (onProgress) ipcRenderer.on('navidrome:sync-progress', progressHandler);
+    return ipcRenderer
+      .invoke('navidrome:sync-library')
+      .finally(() => ipcRenderer.removeListener('navidrome:sync-progress', progressHandler));
+  },
   sendPlayerState: (state) => ipcRenderer.send('player-state', state),
 
   onNotchCommand: (callback) => {

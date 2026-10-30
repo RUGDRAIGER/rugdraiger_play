@@ -23,12 +23,17 @@ export interface Song {
   filePath?: string
   artwork?: string
   file?: File
+  source?: 'local' | 'navidrome'
+  remoteId?: string
+  coverArtId?: string
+  streamUrl?: string
 }
 
 export interface Album {
   id: string
   title: string
   artist: string
+  source: 'local' | 'navidrome'
   artwork?: string
   year?: number
   songIds: string[]

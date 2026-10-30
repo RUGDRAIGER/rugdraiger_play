@@ -4,8 +4,8 @@ const path = require('path');
 
 const AUDIO_EXTENSIONS = new Set([
   'mp3', 'mp2', 'mpa', 'flac', 'wav', 'wave', 'aiff', 'aif', 'aifc', 'alac', 'caf',
-  'aac', 'm4a', 'm4b', 'm4p', 'mp4', 'ogg', 'oga', 'opus', 'wma', 'wmv',
-  'ape', 'wv', 'tta', 'mpc', 'mka', 'webm', 'mid', 'midi', 'kar', '3gp', 'amr', 'dsf', 'dff',
+  'aac', 'm4a', 'm4b', 'm4p', 'ogg', 'oga', 'opus', 'wma',
+  'ape', 'wv', 'tta', 'mpc', 'mka', 'mid', 'midi', 'kar', 'amr', 'dsf', 'dff',
 ]);
 
 /** Carpetas que nunca se recorren (sistema / cachés pesadas) */
@@ -87,6 +87,7 @@ async function scanMusicPaths(paths, onProgress) {
   const results = [];
   const seenPaths = new Set();
   const seenDirs = new Set();
+  let queueIndex = 0;
   let foldersScanned = 0;
   let lastProgressAt = 0;
 
@@ -104,8 +105,9 @@ async function scanMusicPaths(paths, onProgress) {
 
   report('Iniciando escaneo…');
 
-  while (queue.length > 0) {
-    const dir = queue.shift();
+  while (queueIndex < queue.length) {
+    const dir = queue[queueIndex];
+    queueIndex += 1;
     if (!dir || seenDirs.has(dir)) continue;
     seenDirs.add(dir);
 

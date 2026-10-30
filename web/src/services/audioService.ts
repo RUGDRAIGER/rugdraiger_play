@@ -95,6 +95,7 @@ class AudioService {
   }
 
   async preloadNext(song: Song): Promise<void> {
+    if (song.streamUrl || song.filePath?.startsWith('/') || /^[A-Za-z]:\\/.test(song.filePath ?? '')) return
     if (this.preloadedSongId === song.id && this.preloadedBlob) return
     const blob = await resolveSongBlob(song)
     if (!blob) return
@@ -125,7 +126,7 @@ class AudioService {
     }
 
     let blob: Blob | null = null
-    let directUrl: string | null = null
+    let directUrl: string | null = song.streamUrl ?? null
 
     if (song.filePath?.startsWith('/') || /^[A-Za-z]:\\/.test(song.filePath ?? '')) {
       directUrl = await getElectronLocalFileUrl(song.filePath!)
@@ -148,6 +149,8 @@ class AudioService {
     }
 
     if (directUrl) {
+      if (song.streamUrl) this.audioElement.crossOrigin = 'anonymous'
+      else this.audioElement.removeAttribute('crossorigin')
       this.audioElement.src = directUrl
     } else if (blob) {
       this.objectUrl = URL.createObjectURL(blob)
